@@ -1,8 +1,8 @@
 number of cover queries = 2
 client side re-ranking = off
-lucene AOL index path = lucene-AOL-index/
-user search log path = data/user_search_logs/
-language model path = data/language_models/
-reference model path = data/Reference-Model
-AOL dictionary path = data/AOL-Dictionary
+lucene AOL index directory = lucene-AOL-index/
+users search log directory = data/user_search_logs/
+language models directory = data/language_models/
+reference model file = data/Reference-Model
+AOL dictionary file = data/AOL-Dictionary
 number of threads = 4
