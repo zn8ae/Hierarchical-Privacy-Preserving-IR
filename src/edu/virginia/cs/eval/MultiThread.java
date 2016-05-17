@@ -8,9 +8,11 @@ package edu.virginia.cs.eval;
 import edu.virginia.cs.model.LanguageModel;
 import edu.virginia.cs.model.LoadLanguageModel;
 import edu.virginia.cs.utility.FileOperations;
+import edu.virginia.cs.utility.Settings;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,18 +25,11 @@ import java.util.logging.Logger;
  */
 public class MultiThread extends Thread {
 
-    /* folder path where a specified number of user's search log is present */
-    private final String _judgeFile = "./data/user_search_logs/";
+    private Settings settings;
     /* Reference model to smooth language model while generating the cover queries */
     private HashMap<String, Float> referenceModel;
-    /* First parameter of our approach, Entropy range */
-    private double entropyRange;
-    /* Second parameter of our approach, number of cover query for each user query */
-    private int numOfCoverQ;
-    /* Flag to enable client side re-ranking */
-    private boolean enableClientSideRanking;
-    /* Number of threads to be executed */
-    private int numberOfThreads;
+    /* folder path where a specified number of user's search log is present */
+    private final String bbcDictFile = "./data/BBC-term-index.txt";
 
     public static void main(String[] args) throws Exception {
         MultiThread ml = new MultiThread();
@@ -48,12 +43,24 @@ public class MultiThread extends Thread {
      */
     private void loadParameters() {
         try {
-            BufferedReader br = new BufferedReader(new FileReader(new File("parameters.txt")));
-            numOfCoverQ = Integer.parseInt(br.readLine().replace("number of cover queries =", "").trim());
-            entropyRange = Double.parseDouble(br.readLine().replace("entropy range =", "").trim());
+            settings = new Settings();
+            BufferedReader br = new BufferedReader(new FileReader(new File("settings.txt")));
+            int numQ = Integer.parseInt(br.readLine().replace("number of cover queries =", "").trim());
+            settings.setNumberOfCoverQuery(numQ);
             String cRanking = br.readLine().replace("client side re-ranking =", "").trim();
-            enableClientSideRanking = cRanking.equals("on");
-            numberOfThreads = Integer.parseInt(br.readLine().replace("number of threads =", "").trim());
+            settings.setClientSideRanking(cRanking.equals("on"));
+            String indexPath = br.readLine().replace("lucene AOL index path =", "").trim();
+            settings.setLuceneIndexPath(indexPath);
+            String searchLogPath = br.readLine().replace("user search log path =", "").trim();
+            settings.setUserSearchLogPath(searchLogPath);
+            String languageModelPath = br.readLine().replace("language model path =", "").trim();
+            settings.setLanguageModelPath(languageModelPath);
+            String referenceModelPath = br.readLine().replace("reference model path =", "").trim();
+            settings.setReferenceModelPath(referenceModelPath);
+            String AOLDictPath = br.readLine().replace("AOL dictionary path =", "").trim();
+            settings.setAOLDictionaryPath(AOLDictPath);
+            int numberOfThreads = Integer.parseInt(br.readLine().replace("number of threads =", "").trim());
+            settings.setNumberOfThreads(numberOfThreads);
             br.close();
         } catch (IOException ex) {
             Logger.getLogger(MultiThread.class.getName()).log(Level.SEVERE, null, ex);
@@ -68,10 +75,6 @@ public class MultiThread extends Thread {
         if (!file.exists()) {
             file.mkdir();
         }
-        file = new File("lda-output-files");
-        if (!file.exists()) {
-            file.mkdir();
-        }
     }
 
     /**
@@ -82,27 +85,55 @@ public class MultiThread extends Thread {
      */
     private void createThreads() throws InterruptedException {
         try {
-            MyThread[] myT = new MyThread[numberOfThreads];
-            ArrayList<String> allUserId = getAllUserId(_judgeFile);
-            loadRefModel();
+            MyThread[] myT = new MyThread[settings.getNumberOfThreads()];
+            SemanticEvaluation semEval = new SemanticEvaluation(bbcDictFile);
+            ArrayList<String> allUserId = getAllUserId(settings.getUserSearchLogPath(), -1);
+            loadRefModel(settings.getReferenceModelPath());
             LoadLanguageModel llm = new LoadLanguageModel();
             llm.loadModels(3);
             ArrayList<LanguageModel> langModels = llm.getLanguageModels();
-            int limit = allUserId.size() / numberOfThreads;
-            for (int i = 0; i < numberOfThreads; i++) {
+            int limit = allUserId.size() / settings.getNumberOfThreads();
+            for (int i = 0; i < settings.getNumberOfThreads(); i++) {
                 int start = i * limit;
                 ArrayList<String> list;
-                if (i == numberOfThreads - 1) {
+                if (i == settings.getNumberOfThreads() - 1) {
                     list = new ArrayList<>(allUserId.subList(start, allUserId.size()));
                 } else {
                     list = new ArrayList<>(allUserId.subList(start, start + limit));
                 }
-                myT[i] = new MyThread(list, referenceModel, "thread_" + i, entropyRange, numOfCoverQ, enableClientSideRanking, langModels);
+                myT[i] = new MyThread(list, "thread_" + i, settings, referenceModel, langModels, semEval);
                 myT[i].start();
             }
-            for (int i = 0; i < numberOfThreads; i++) {
+            for (int i = 0; i < settings.getNumberOfThreads(); i++) {
                 myT[i].getThread().join();
             }
+            /* When all threads finished its execution, generate final result */
+            double totalKLDivergence = 0.0;
+            double totalMI = 0.0;
+            double totalMAP = 0.0;
+            int totalUsers = 0;
+            double totalQueries = 0;
+            for (int i = 0; i < settings.getNumberOfThreads(); i++) {
+                String[] result = myT[i].getResult().split("\t");
+                totalUsers += Integer.parseInt(result[0]);
+                totalQueries += Double.parseDouble(result[1]);
+                totalMAP += Double.valueOf(result[2]);
+                totalKLDivergence += Double.valueOf(result[3]);
+                totalMI += Double.valueOf(result[4]);
+            }
+            double finalKL = totalKLDivergence / totalUsers;
+            double finalMI = totalMI / totalUsers;
+            double finalMAP = totalMAP / totalQueries;
+            FileWriter fw = new FileWriter("model-output-files/final_output.txt");
+            fw.write("**************Parameter Settings**************\n");
+            fw.write("Number of cover queries = " + settings.getNumberOfCoverQuery() + "\n");
+            fw.write("**********************************************\n");
+            fw.write("Total Number of users = " + totalUsers + "\n");
+            fw.write("Total Number of queries tested = " + totalQueries + "\n");
+            fw.write("Averge MAP = " + finalMAP + "\n");
+            fw.write("Average KL-Divergence = " + finalKL + "\n");
+            fw.write("Average Mutual Information = " + finalMI + "\n");
+            fw.close();
         } catch (Throwable ex) {
             Logger.getLogger(MultiThread.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -115,14 +146,19 @@ public class MultiThread extends Thread {
      * @return list of all user id
      * @throws java.lang.Throwable
      */
-    private ArrayList<String> getAllUserId(String folder) throws Throwable {
+    private ArrayList<String> getAllUserId(String folder, int count) throws Throwable {
         ArrayList<String> allUserIds = new ArrayList<>();
         File dir = new File(folder);
+        int userCount = 0;
         for (File f : dir.listFiles()) {
             if (f.isFile()) {
                 String fileName = f.getName();
                 fileName = fileName.substring(0, fileName.lastIndexOf("."));
                 allUserIds.add(fileName);
+                userCount++;
+            }
+            if (userCount == count) {
+                break;
             }
         }
         return allUserIds;
@@ -133,10 +169,10 @@ public class MultiThread extends Thread {
      *
      * @throws java.lang.Throwable
      */
-    private void loadRefModel() throws Throwable {
+    private void loadRefModel(String filename) throws Throwable {
         referenceModel = new HashMap<>();
         FileOperations fiop = new FileOperations();
-        ArrayList<String> lines = fiop.LoadFile("./data/reference_model.txt", -1);
+        ArrayList<String> lines = fiop.LoadFile(filename, -1);
         for (String line : lines) {
             line = line.trim();
             String[] words = line.split(" ");
@@ -156,19 +192,18 @@ class MyThread implements Runnable {
     private final ArrayList<String> userIds;
     private final HashMap<String, Float> referenceModel;
     private final String threadId;
-    private final double entropyRange;
-    private final int numOfCoverQ;
-    private final boolean enableClientSideRanking;
-    ArrayList<LanguageModel> langModels;
+    private final Settings settings;
+    private final SemanticEvaluation semEval;
+    private final ArrayList<LanguageModel> langModels;
+    private String result;
 
-    public MyThread(ArrayList<String> param, HashMap<String, Float> refModel, String id, double entropy, int totalCoverQ, boolean flag, ArrayList<LanguageModel> models) {
-        userIds = param;
-        referenceModel = refModel;
+    public MyThread(ArrayList<String> listUsers, String id, Settings param, HashMap<String, Float> refModel, ArrayList<LanguageModel> models, SemanticEvaluation sem) {
+        userIds = listUsers;
         threadId = id;
-        entropyRange = entropy;
-        numOfCoverQ = totalCoverQ;
-        enableClientSideRanking = flag;
+        settings = param;
+        referenceModel = refModel;
         langModels = models;
+        semEval = sem;
     }
 
     /**
@@ -177,8 +212,8 @@ class MyThread implements Runnable {
     @Override
     public void run() {
         try {
-            Evaluate evaluate = new Evaluate(entropyRange, numOfCoverQ, enableClientSideRanking, langModels);
-            evaluate.startEval(userIds, referenceModel, threadId);
+            Evaluate evaluate = new Evaluate(settings, langModels);
+            evaluate.startEval(userIds, referenceModel, threadId, semEval);
         } catch (Throwable ex) {
             Logger.getLogger(MyThread.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -192,6 +227,10 @@ class MyThread implements Runnable {
             t = new Thread(this);
             t.start();
         }
+    }
+
+    public String getResult() {
+        return result;
     }
 
     /**

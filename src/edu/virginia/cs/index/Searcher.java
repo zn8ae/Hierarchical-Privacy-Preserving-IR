@@ -1,5 +1,6 @@
 package edu.virginia.cs.index;
 
+import edu.virginia.cs.eval.Evaluate;
 import edu.virginia.cs.utility.SpecialAnalyzer;
 import edu.virginia.cs.user.UserProfile;
 import edu.virginia.cs.utility.StringTokenizer;
@@ -33,6 +34,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Searcher {
 
@@ -58,7 +61,7 @@ public class Searcher {
             indexSearcher = new IndexSearcher(reader);
             formatter = new SimpleHTMLFormatter("****", "****");
         } catch (IOException exception) {
-            exception.printStackTrace();
+            Logger.getLogger(Evaluate.class.getName()).log(Level.SEVERE, null, exception);
         }
     }
 
@@ -75,8 +78,8 @@ public class Searcher {
      * Initialize the user profile maintained by the server side.
      *
      */
-    public void initializeUserProfile() {
-        userProfile = new UserProfile();
+    public void initializeUserProfile(HashMap<String, Double> IDFRecord) {
+        userProfile = new UserProfile(IDFRecord);
     }
 
     /**
@@ -121,7 +124,7 @@ public class Searcher {
                 Query textQuery = parser.parse(QueryParser.escape(searchQuery.queryText()));
                 combinedQuery.add(textQuery, BooleanClause.Occur.MUST);
             } catch (ParseException exception) {
-                exception.printStackTrace();
+                Logger.getLogger(Evaluate.class.getName()).log(Level.SEVERE, null, exception);
             }
         }
         return runSearch(combinedQuery, searchQuery);
@@ -255,7 +258,7 @@ public class Searcher {
             searchResult.trimResults(searchQuery.fromDoc());
             return searchResult;
         } catch (IOException exception) {
-            exception.printStackTrace();
+            Logger.getLogger(Evaluate.class.getName()).log(Level.SEVERE, null, exception);
         }
         return new SearchResult(searchQuery);
     }
@@ -287,7 +290,7 @@ public class Searcher {
             Document doc = indexSearcher.doc(hits[0].doc);
             returnedResult = doc.getField(indexableField).stringValue();
         } catch (IOException exception) {
-            exception.printStackTrace();
+            Logger.getLogger(Evaluate.class.getName()).log(Level.SEVERE, null, exception);
         }
         return returnedResult;
     }

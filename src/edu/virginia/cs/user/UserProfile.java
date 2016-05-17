@@ -7,10 +7,6 @@ package edu.virginia.cs.user;
 
 import edu.virginia.cs.utility.SpecialAnalyzer;
 import edu.virginia.cs.utility.StringTokenizer;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,8 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanQuery;
@@ -41,11 +35,9 @@ public class UserProfile {
     private double totalQueryLength;
     private double totalQuery;
 
-    public UserProfile() {
+    public UserProfile(HashMap<String, Double> idfRec) {
         uProfile = new HashMap<>();
-        IDFRecord = new HashMap<>();
-        loadIDFRecord("./data/AOLDictionary.txt");
-
+        IDFRecord = idfRec;
         totalTokens = 0;
         totalQuery = 0;
         totalQueryLength = 0;
@@ -53,23 +45,6 @@ public class UserProfile {
         SpecialAnalyzer analyzer = new SpecialAnalyzer();
         parser = new QueryParser(Version.LUCENE_46, "", analyzer);
         BooleanQuery.setMaxClauseCount(2048);
-    }
-
-    private void loadIDFRecord(String filename) {
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
-            double totalCount = Double.valueOf(br.readLine());
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] split = line.split("\t");
-                double docFreq = 1 + Math.log10(totalCount / Double.valueOf(split[1]));
-                IDFRecord.put(split[0], docFreq);
-            }
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(UserProfile.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(UserProfile.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }
 
     /**
@@ -86,9 +61,6 @@ public class UserProfile {
      */
     public void setReferenceModel(HashMap<String, Float> rModel) {
         referenceModel = rModel;
-//        for (String str : rModel.keySet()) {
-//            uProfile.put(str, 0);
-//        }
     }
 
     public HashMap<String, Float> getReferenceModel() {

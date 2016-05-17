@@ -32,6 +32,10 @@ public class PlausibilityEvaluation {
         rql.loadSearchLogs("./data/updated_search_log(top 1000)", 1000);
     }
     
+    /**
+     * 
+     * @param filename 
+     */
     private void loadFile(String filename) {
         try {
             BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
@@ -60,6 +64,11 @@ public class PlausibilityEvaluation {
         }
     }
     
+    /**
+     * 
+     * @param folder
+     * @param n 
+     */
     private void loadSearchLogs(String folder, int n) {
         File dir = new File(folder);
         for (File f : dir.listFiles()) {
@@ -75,6 +84,11 @@ public class PlausibilityEvaluation {
         storeQueryInFile("./data/random_" + n + "_query.txt", n);
     }
     
+    /**
+     * 
+     * @param filename
+     * @param n 
+     */
     private void storeQueryInFile(String filename, int n) {
         FileWriter fw;
         try {

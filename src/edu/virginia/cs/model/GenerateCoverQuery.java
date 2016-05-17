@@ -19,7 +19,6 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import edu.virginia.cs.utility.SpecialAnalyzer;
 import edu.virginia.cs.utility.StringTokenizer;
 
 /**
@@ -29,6 +28,7 @@ import edu.virginia.cs.utility.StringTokenizer;
 public class GenerateCoverQuery {
 
     private final ArrayList<LanguageModel> languageModels;
+    private int lastQueryTopicNo;
 
     public GenerateCoverQuery(ArrayList<LanguageModel> list) {
         languageModels = list;
@@ -88,7 +88,7 @@ public class GenerateCoverQuery {
 
     /**
      * Generate cover query of length 1 using unigram language model.
-     * 
+     *
      * @param level
      * @param bucketNum
      * @return the cover query
@@ -371,13 +371,15 @@ public class GenerateCoverQuery {
     }
 
     /**
-     * Creates N cover queries based on true user query.
+     * Creates N cover queries based on true user query. Handle sequentially
+     * edited queries by using lastQueryTopicNo.
      *
      * @param query true user query
      * @param N number of cover queries required
+     * @param lastQueryTopicNo
      * @return list of cover queries
      */
-    public ArrayList<String> generateNQueries(String query, int N) {
+    public ArrayList<String> generateNQueries(String query, int N, int lastQueryTopicNo) {
         ArrayList<String> retValue = new ArrayList<>();
         ArrayList<Integer> scores = getScore(query);
         if (scores.get(1) == -1) {
@@ -385,7 +387,8 @@ public class GenerateCoverQuery {
             return null;
         }
 //        System.out.println(scores.toString());
-        int queryTopicLevel = languageModels.get(scores.get(1)).getLevel();
+        lastQueryTopicNo = scores.get(1);
+        int queryTopicLevel = languageModels.get(lastQueryTopicNo).getLevel();
         Integer bucketNum = mostCommon(new ArrayList<Integer>(scores.subList(2, scores.size())));
         int count = 0;
         while (true) {
@@ -399,6 +402,14 @@ public class GenerateCoverQuery {
             }
         }
         return retValue;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public int getLastQueryTopicNo() {
+        return lastQueryTopicNo;
     }
 
     /**
@@ -436,7 +447,7 @@ public class GenerateCoverQuery {
             fw = new FileWriter("./data/random_query_with_cover_query.txt");
             String line;
             while ((line = br.readLine()) != null) {
-                ArrayList<String> coverQueries = generateNQueries(line, 1);
+                ArrayList<String> coverQueries = generateNQueries(line, 1, -1);
                 if (coverQueries == null) {
                     System.out.println("Topic can not be inferred for query = " + line);
                 } else {

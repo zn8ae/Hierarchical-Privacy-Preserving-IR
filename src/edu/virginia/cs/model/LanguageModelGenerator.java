@@ -5,6 +5,7 @@
  */
 package edu.virginia.cs.model;
 
+import edu.virginia.cs.utility.DMOZDataReader;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;

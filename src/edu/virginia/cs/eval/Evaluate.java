@@ -9,7 +9,6 @@ import edu.virginia.cs.index.ResultDoc;
 import edu.virginia.cs.index.Searcher;
 import edu.virginia.cs.model.GenerateCoverQuery;
 import edu.virginia.cs.model.LanguageModel;
-import edu.virginia.cs.utility.SpecialAnalyzer;
 import edu.virginia.cs.user.UserProfile;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -21,29 +20,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.util.Version;
 import edu.virginia.cs.similarities.OkapiBM25;
+import edu.virginia.cs.user.UserSession;
+import edu.virginia.cs.utility.Settings;
 import edu.virginia.cs.utility.StringTokenizer;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Evaluate {
 
     /* folder path where a specified number of user's search log is present */
-    private final String _judgeFile = "./data/updated_search_log(top 1000)/";
+    private final String searchLogPath;
     /* folder path where the AOL index is located */
-    private final String _indexPath = "lucene-AOL-index";
+    private final String indexPath;
     /* Searcher class object to search for results of a user query */
     private Searcher _searcher = null;
     /* Storing a specific user's queries and corresponding all clicked documents */
-    private HashMap<String, ArrayList<String>> mappingQueryToURL;
+    private HashMap<String, HashSet<String>> mappingQueryToURL;
+    /* To compute tf-idf weight while selecting top t words from a document */
+    private HashMap<String, Double> IDFRecord;
     /* Storing a specific user's all queries */
     private ArrayList<String> listOfUserQuery;
     /* Storing a specific user's all queries */
     private ArrayList<String> listOfCoverQuery;
     /* Object to generate cover queries for a specific user query */
     private final GenerateCoverQuery gCoverQuery;
+    /* User session object to store information about a user session */
+    private UserSession session;
     /* User profile which is constructed and maintained in the client side */
     private UserProfile uProfile;
     /* Total MAP for 'n' users that we are evaluating, ex. in our case, n = 250 */
@@ -54,31 +60,26 @@ public class Evaluate {
     private double totalKL = 0;
     /* Total mutual information for 'n' users that we are evaluating, ex. in our case, n = 250 */
     private double totalMI = 0;
-    /* For calculating mutual information */
-    private final SemanticEvaluation semEval;
     /* Second parameter of our approach, number of cover query for each user query */
     private final int numOfCoverQ;
-    /* Query parser used to parse user query */
-    private final QueryParser parser;
     /* To turn client side re-ranking on or off */
     private final boolean isCSRankingActive;
 
-    public Evaluate(double entropy, int totalCoverQ, boolean param, ArrayList<LanguageModel> list) {
+    public Evaluate(Settings settings, ArrayList<LanguageModel> list) {
         gCoverQuery = new GenerateCoverQuery(list);
         // setting number of cover query that will be generated for each user query
-        numOfCoverQ = totalCoverQ;
+        numOfCoverQ = settings.getNumberOfCoverQuery();
         // setting flag for turning on or off client side re-ranking
-        isCSRankingActive = param;
+        isCSRankingActive = settings.isClientSideRanking();
+        searchLogPath = settings.getUserSearchLogPath();
+        indexPath = settings.getLuceneIndexPath();
 
-        parser = new QueryParser(Version.LUCENE_46, "", new SpecialAnalyzer());
-        _searcher = new Searcher(_indexPath);
+        _searcher = new Searcher(indexPath);
         _searcher.setSimilarity(new OkapiBM25());
         // setting the flag to enable personalization
         _searcher.activatePersonalization(true);
-
-        // initialization for Mutual Information calculation
-        semEval = new SemanticEvaluation();
-        semEval.initiliaze();
+        // loading idf information
+        loadIDFRecord(settings.getAOLDictionaryPath());
     }
 
     /**
@@ -88,25 +89,35 @@ public class Evaluate {
      * @param userId
      * @throws java.lang.Throwable
      */
-    private void createUserJudgements(String userId) {
+    private void loadUserJudgements(String userId) {
         mappingQueryToURL = new HashMap<>();
-        listOfUserQuery = new ArrayList<>();
-        String judgeFile = _judgeFile + userId + ".txt";
+        String judgeFile = searchLogPath + userId + ".txt";
         BufferedReader br;
         try {
             br = new BufferedReader(new FileReader(judgeFile));
-            String query;
-            while ((query = br.readLine()) != null) {
-                String relDoc = br.readLine();
-                ArrayList<String> tempList;
-                if (mappingQueryToURL.containsKey(query)) {
-                    tempList = mappingQueryToURL.get(query);
-                } else {
-                    tempList = new ArrayList<>();
-                    listOfUserQuery.add(query);
+            String line;
+            boolean isQuery = false;
+            String query = null;
+            while ((line = br.readLine()) != null) {
+                if (line.isEmpty()) {
+                    isQuery = false;
+                    continue;
                 }
-                tempList.add(relDoc);
-                mappingQueryToURL.put(query, tempList);
+
+                if (!isQuery) {
+                    query = line;
+                    isQuery = true;
+                } else {
+                    HashSet<String> tempSet;
+                    if (mappingQueryToURL.containsKey(query)) {
+                        tempSet = mappingQueryToURL.get(line);
+                        tempSet.add(line);
+                    } else {
+                        tempSet = new HashSet<>();
+                        tempSet.add(line);
+                        mappingQueryToURL.put(query, tempSet);
+                    }
+                }
             }
         } catch (Exception ex) {
             Logger.getLogger(Evaluate.class.getName()).log(Level.SEVERE, null, ex);
@@ -114,18 +125,46 @@ public class Evaluate {
     }
 
     /**
-     * Method that initializes required things for the cover query generation
-     * procedure.
+     * Load IDF of AOL dictionary.
      *
-     * @throws java.File.IOException
+     * @param filename
      */
-    private void intializeCoverQueryGeneration(HashMap<String, Float> referenceModel, String threadId) throws IOException {
-        uProfile = new UserProfile();
-        uProfile.setReferenceModel(referenceModel);
+    private void loadIDFRecord(String filename) {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
+            double totalCount = Double.valueOf(br.readLine());
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] split = line.split("\t");
+                double docFreq = 1 + Math.log10(totalCount / Double.valueOf(split[1]));
+                IDFRecord.put(split[0], docFreq);
+            }
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(UserProfile.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(UserProfile.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
-        /**
-         * add your code here.
-         */
+    /**
+     *
+     * @param earlierDate
+     * @param laterDate
+     * @return
+     */
+    private long getDateDifference(String earlierDate, String laterDate) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
+        long diffMinutes = -1;
+        try {
+            Date currentDate = format.parse(laterDate);
+            Date previousDate = format.parse(earlierDate);
+            //in milliseconds
+            long diff = currentDate.getTime() - previousDate.getTime();
+            diffMinutes = diff / (60 * 1000);
+        } catch (Exception ex) {
+            Logger.getLogger(UserProfile.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return diffMinutes;
     }
 
     /**
@@ -134,16 +173,17 @@ public class Evaluate {
      * @param allUserId
      * @param referenceModel
      * @param threadId
+     * @param semEval
      * @throws java.lang.Throwable
      */
-    public void startEval(ArrayList<String> allUserId, HashMap<String, Float> referenceModel, String threadId) throws Throwable {
+    public void startEval(ArrayList<String> allUserId, HashMap<String, Float> referenceModel, String threadId, SemanticEvaluation semEval) throws Throwable {
         int countUsers = 0;
         FileWriter writer = new FileWriter("model-output-files/" + threadId + ".txt");
         for (String userId : allUserId) {
             countUsers++;
 
             // initializing user profile of the server side and setting the reference model
-            _searcher.initializeUserProfile();
+            _searcher.initializeUserProfile(IDFRecord);
             _searcher.getUserProfile().setReferenceModel(referenceModel);
 
             // required for calculating mutual information between user queris and cover queries
@@ -151,60 +191,51 @@ public class Evaluate {
             listOfCoverQuery = new ArrayList<>();
 
             // generate the clicked urls for evaluation
-            createUserJudgements(userId);
-            // initialization for cover query generation
-            intializeCoverQueryGeneration(referenceModel, threadId);
+            loadUserJudgements(userId);
+            // initialization for client side user profile
+            uProfile = new UserProfile(IDFRecord);
+            uProfile.setReferenceModel(referenceModel);
 
             double meanAvgPrec = 0.0;
             // Number of queries that have non-zero result set
-            double numQueries = 0;
-            // index of the user query
-            int queryIndex = 0;
+            int numQueries = 0;
 
-            for (String query : mappingQueryToURL.keySet()) {
-                ArrayList<String> relDocs = new ArrayList<>();
-                ArrayList<String> clickedDocs = mappingQueryToURL.get(query);
-
-                Query textQuery = parser.parse(QueryParser.escape(query));
-                String[] qParts = textQuery.toString().split(" ");
-
-                /**
-                 * Checking whether a user query and clicked documents are
-                 * actually relevant or not! For example, "american idol season
-                 * one" is no longer related to www.tv.com.
-                 *
-                 */
-                for (String relDoc : clickedDocs) {
-                    String docContent = _searcher.search(relDoc, "clicked_url");
-                    HashSet<String> tokSet = new HashSet<>(StringTokenizer.TokenizeString(docContent));
-                    int tokMatched = 0;
-
-                    for (String part : qParts) {
-                        if (tokSet.contains(part)) {
-                            tokMatched++;
-                        }
-                    }
-                    if (tokMatched > 0) {
-                        relDocs.add(relDoc);
-                    }
-                }
-
+            /**
+             * query contains query plus the timestamp when the query was
+             * submitted.
+             */
+            String lastQuerySubmitTime = null;
+            session = new UserSession();
+            for (String queryWithTimeStamp : mappingQueryToURL.keySet()) {
+                HashSet<String> clickedDocs = mappingQueryToURL.get(queryWithTimeStamp);
                 /**
                  * If a user query has at least one corresponding clicked
                  * document, then we evaluate it, otherwise not.
                  *
                  */
-                if (relDocs.size() > 0) {
+                if (clickedDocs.size() > 0) {
                     String judgement = "";
-                    for (String doc : relDocs) {
+                    for (String doc : clickedDocs) {
                         judgement += doc + " ";
                     }
+                    String[] tokens = queryWithTimeStamp.split("\t");
+                    String query = tokens[0].trim();
+                    String timeStamp = tokens[1].trim();
+                    if (lastQuerySubmitTime != null) {
+                        long diff = getDateDifference(lastQuerySubmitTime, timeStamp);
+                        if (diff <= 60) {
+                            // current query and previous query are from same session
+                        } else {
+                            // start of a new user session
+                            session = new UserSession();
+                        }
+                    }
                     // computing average precision for a query
-                    double avgPrec = AvgPrec(query, judgement, queryIndex);
+                    double avgPrec = AvgPrec(query, numQueries, judgement);
                     meanAvgPrec += avgPrec;
                     ++numQueries;
+                    lastQuerySubmitTime = timeStamp;
                 }
-                queryIndex++;
             }
 
             // totalMAP = sum of all MAP computed for queries of 'n' users
@@ -246,13 +277,6 @@ public class Evaluate {
         writer.write("Average MI : " + avgMI + "\n");
         writer.flush();
         writer.close();
-
-//        System.out.println("\n************Result after full pipeline execution for n users**************");
-//        System.out.println("\nTotal number of users : " + countUsers);
-//        System.out.println("Total number of quries tested : " + totalQueries);
-//        System.out.println("Map : " + finalMAP);
-//        System.out.println("Average KL : " + avgKL);
-//        System.out.println("Average MI : " + avgMI);
     }
 
     /**
@@ -263,55 +287,84 @@ public class Evaluate {
      * @param index index of the user query
      * @return average precision
      */
-    private double AvgPrec(String query, String clickedDocs, int index) throws Throwable {
+    private double AvgPrec(String query, int queryId, String clickedDocs) throws Throwable {
         // generating the cover queries
-        ArrayList<String> coverQueries = null; // add your code here
         double avgp = 0.0;
-        int randNum = (int) (Math.random() * coverQueries.size());
+        if (numOfCoverQ == 0) {
+            // if no cover query, just submit the original query
+            avgp = submitOriginalQuery(query, clickedDocs);
+        } else {
+            ArrayList<String> coverQueries;
+            int retVal = session.isRepeatedQuery(query);
+            if (retVal == -1) {
+                coverQueries = gCoverQuery.generateNQueries(query, numOfCoverQ, session.getLastQueryTopicNo());
+            } else {
+                coverQueries = session.getCoverQueries(retVal);
+            }
+            // if for some reason cover queries are not generated properly
+            if (coverQueries == null) {
+                return avgp;
+            }
+            int randNum = (int) (Math.random() * coverQueries.size());
+            for (int k = 0; k < coverQueries.size(); k++) {
+                listOfCoverQuery.add(coverQueries.get(k));
+                // submitting cover query to the search engine
+                ArrayList<ResultDoc> searchResults = _searcher.search(coverQueries.get(k)).getDocs();
+                // generating fake clicks for the cover queries, one click per cover query
+                if (!searchResults.isEmpty()) {
+                    int rand = (int) (Math.random() * searchResults.size());
+                    ResultDoc rdoc = searchResults.get(rand);
+                    // update user profile kept in the server side
+                    _searcher.updateUProfileUsingClickedDocument(rdoc.content());
+                }
+                // submitting the original user query to the search engine
+                if (k == randNum) {
+                    avgp = submitOriginalQuery(query, clickedDocs);
+                }
+            }
+            // updating user session with user query and corresponding cover queries
+            session.addUserQuery(query, queryId, gCoverQuery.getLastQueryTopicNo());
+            session.addCoverQuery(queryId, coverQueries);
+        }
+        return avgp;
+    }
 
-        for (int k = 0; k < coverQueries.size(); k++) {
-            listOfCoverQuery.add(coverQueries.get(k));
-            // submitting cover query to the search engine
-            ArrayList<ResultDoc> searchResults = _searcher.search(coverQueries.get(k)).getDocs();
-            // generating fake clicks for the cover queries
-            // one click per cover query
-            if (!searchResults.isEmpty()) {
-                int rand = (int) (Math.random() * searchResults.size());
-                ResultDoc rdoc = searchResults.get(rand);
+    /**
+     * Submit the original query to search engine and computes average precision
+     * of the search results.
+     *
+     * @param query
+     * @param clickedDocs
+     * @return
+     * @throws IOException
+     */
+    private double submitOriginalQuery(String query, String clickedDocs) throws IOException {
+        double avgp = 0.0;
+        ArrayList<ResultDoc> results = _searcher.search(query).getDocs();
+        if (results.isEmpty()) {
+            return avgp;
+        }
+        // re-rank the results based on the user profile kept in client side
+        if (isCSRankingActive) {
+            results = reRankResults(results);
+        }
+        HashSet<String> relDocs = new HashSet<>(Arrays.asList(clickedDocs.split(" ")));
+        int i = 1;
+        double numRel = 0;
+        for (ResultDoc rdoc : results) {
+            if (relDocs.contains(rdoc.geturl())) {
+                numRel++;
+                avgp = avgp + (numRel / i);
+                // update user profile kept in the client side
+                uProfile.updateUserProfileUsingClickedDocument(rdoc.content());
                 // update user profile kept in the server side
                 _searcher.updateUProfileUsingClickedDocument(rdoc.content());
             }
-
-            // submitting the original user query to the search engine
-            if (k == randNum) {
-                ArrayList<ResultDoc> results = _searcher.search(query).getDocs(); // for Plausible Deniable Search
-                if (results.isEmpty()) {
-                    continue;
-                }
-
-                // re-rank the results based on the user profile kept in client side
-                if (isCSRankingActive) {
-                    results = reRankResults(results);
-                }
-                HashSet<String> relDocs = new HashSet<>(Arrays.asList(clickedDocs.split(" ")));
-                int i = 1;
-                double numRel = 0;
-                for (ResultDoc rdoc : results) {
-                    if (relDocs.contains(rdoc.geturl())) {
-                        numRel++;
-                        avgp = avgp + (numRel / i);
-                        // update user profile kept in the client side
-                        uProfile.updateUserProfileUsingClickedDocument(rdoc.content());
-                        // update user profile kept in the server side
-                        _searcher.updateUProfileUsingClickedDocument(rdoc.content());
-                    }
-                    ++i;
-                }
-                avgp = avgp / relDocs.size();
-                // updating user profile kept in client side using original user query
-                uProfile.updateUserProfile(query);
-            }
+            ++i;
         }
+        avgp = avgp / relDocs.size();
+        // updating user profile kept in client side using original user query
+        uProfile.updateUserProfile(query);
         return avgp;
     }
 

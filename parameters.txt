@@ -1,3 +1,0 @@
-number of cover queries = 2
-client side re-ranking = off
-number of threads = 4
