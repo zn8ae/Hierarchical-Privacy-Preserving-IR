@@ -104,6 +104,7 @@ class AOLHandler extends DefaultHandler {
             String localName, String qName) throws SAXException {
         if (qName.equalsIgnoreCase("crawledData")) {
             System.out.println("Parsing Completed!!!");
+            System.out.println("Total " + pageCount + " pages loaded.");
             try {
                 int counter = 0;
                 for (String token : Dictionary.keySet()) {
@@ -123,8 +124,8 @@ class AOLHandler extends DefaultHandler {
                         .getName()).log(Level.SEVERE, null, ex);
             }
         } else if (qName.equalsIgnoreCase("page")) {
-            pageCount++;
             if (buffer.toString().length() > 0) {
+                pageCount++;
                 StoreInDictionary(StringTokenizer.TokenizeString(buffer.toString()), pageCount);
             }
             if (pageCount % 10000 == 0) {

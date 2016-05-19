@@ -5,7 +5,6 @@
  */
 package edu.virginia.cs.preprocessing;
 
-import edu.virginia.cs.utility.SpecialAnalyzer;
 import edu.virginia.cs.utility.StringTokenizer;
 import java.io.File;
 import java.io.FileWriter;
@@ -50,6 +49,7 @@ public class AOLDictionary {
         try {
             File inputFile = new File(filename);
             DataHandler dataHandler = new DataHandler("./data/AOL-Dictionary-TF");
+//            DataHandler dataHandler = new DataHandler("./data/AOL-Dictionary");
             saxParser.parse(inputFile, dataHandler);
         } catch (SAXException | IOException ex) {
             Logger.getLogger(AOLDictionary.class.getName()).log(Level.SEVERE, null, ex);
@@ -65,12 +65,10 @@ class DataHandler extends DefaultHandler {
     private int pageCount;
     private int tokenCount;
     private final HashMap<String, Integer> Dictionary;
-    private final HashSet<String> aliveURLs;
 
     public DataHandler(String filename) {
         buffer = new StringBuilder();
         Dictionary = new HashMap<>();
-        aliveURLs = new HashSet<>();
         try {
             fwriter = new FileWriter(filename);
         } catch (IOException ex) {
@@ -87,7 +85,6 @@ class DataHandler extends DefaultHandler {
             pageCount = 0;
             tokenCount = 0;
         } else if (qName.equalsIgnoreCase("page")) {
-            aliveURLs.add(attributes.getValue("url"));
         } else if (qName.equalsIgnoreCase("content")) {
             isContent = true;
             buffer.setLength(0);
@@ -109,27 +106,22 @@ class DataHandler extends DefaultHandler {
                     }
                 }
                 fwriter.close();
-                FileWriter fw = new FileWriter("aliveUrls.txt");
-                for (String url : aliveURLs) {
-                    fw.write(url + "\n");
-                    fw.flush();
-                }
-                fw.close();
                 System.out.println("Total tokens = " + tokenCount);
+//                System.out.println("Total pages = " + pageCount);
             } catch (IOException ex) {
                 Logger.getLogger(DataHandler.class
                         .getName()).log(Level.SEVERE, null, ex);
             }
         } else if (qName.equalsIgnoreCase("page")) {
-            pageCount++;
+            if (buffer.toString().length() > 0) {
+                pageCount++;
+                StoreInDictionary(StringTokenizer.TokenizeString(buffer.toString()));
+            }
             if (pageCount % 10000 == 0) {
                 System.out.println(pageCount + " pages completed...!");
             }
         } else if (qName.equalsIgnoreCase("content")) {
-            if (isContent) {
-                isContent = false;
-                StoreInDictionary(StringTokenizer.TokenizeString(buffer.toString()));
-            }
+            isContent = false;
         }
     }
 
