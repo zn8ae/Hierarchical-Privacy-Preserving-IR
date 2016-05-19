@@ -15,7 +15,7 @@ import java.util.HashSet;
  */
 public class UserSession {
 
-    private final ArrayList<UserQuery> allQueriesInSession;
+    private final ArrayList<Query> allQueriesInSession;
     private final HashMap<Integer, HashSet<String>> originalQueryToCoverQuery;
 
     public UserSession() {
@@ -30,7 +30,7 @@ public class UserSession {
      * @param queryTopicNo
      */
     public void addUserQuery(String query, int queryId, int queryTopicNo) {
-        UserQuery userQuery = new UserQuery(queryId, query, queryTopicNo);
+        Query userQuery = new Query(queryId, query, queryTopicNo);
         allQueriesInSession.add(userQuery);
     }
 
@@ -51,7 +51,7 @@ public class UserSession {
      * @return
      */
     public int isRepeatedQuery(String query) {
-        for (UserQuery userQuery : allQueriesInSession) {
+        for (Query userQuery : allQueriesInSession) {
             if (userQuery.getQuery().equals(query)) {
                 return userQuery.getQueryId();
             }
@@ -86,13 +86,13 @@ public class UserSession {
     }
 }
 
-class UserQuery {
+class Query {
 
     private final int queryId;
     private final String query;
     private final int queryTopicNo;
 
-    public UserQuery(int queryId, String query, int queryTopicNo) {
+    public Query(int queryId, String query, int queryTopicNo) {
         this.queryId = queryId;
         this.query = query;
         this.queryTopicNo = queryTopicNo;

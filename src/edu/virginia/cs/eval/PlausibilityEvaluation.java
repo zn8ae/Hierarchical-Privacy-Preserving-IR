@@ -29,7 +29,7 @@ public class PlausibilityEvaluation {
     
     public static void main(String[] args) {
         PlausibilityEvaluation rql = new PlausibilityEvaluation();
-        rql.loadSearchLogs("./data/updated_search_log(top 1000)", 1000);
+        rql.loadSearchLogs("./data/user_search_logs/", 1000);
     }
     
     /**
@@ -81,7 +81,7 @@ public class PlausibilityEvaluation {
                 break;
             }
         }
-        storeQueryInFile("./data/random_" + n + "_query.txt", n);
+        storeQueryInFile("./data/Random-" + n + "-Query", n);
     }
     
     /**

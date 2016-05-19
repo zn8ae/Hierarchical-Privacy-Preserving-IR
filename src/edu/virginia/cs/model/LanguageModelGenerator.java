@@ -298,7 +298,7 @@ public class LanguageModelGenerator {
     public static void main(String[] args) throws Throwable {
         // TODO code application logic here
         LanguageModelGenerator tmodel = new LanguageModelGenerator();
-        tmodel.ReadDMOZData("data/DMOZ_upto_level_4.xml");
+        tmodel.ReadDMOZData("data/DMOZ-Crawled-Data-Level-4.xml");
         tmodel.LoadDirectory("data/dmoz_data/Top/");
     }
 }

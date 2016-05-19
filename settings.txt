@@ -5,4 +5,5 @@ users search log directory = data/user_search_logs/
 language models directory = data/language_models/
 reference model file = data/Reference-Model
 AOL dictionary file = data/AOL-Dictionary
+term index file = data/Term-Index
 number of threads = 4

@@ -26,10 +26,7 @@ import java.util.logging.Logger;
 public class MultiThread extends Thread {
 
     private Settings settings;
-    /* Reference model to smooth language model while generating the cover queries */
     private HashMap<String, Float> referenceModel;
-    /* folder path where a specified number of user's search log is present */
-    private final String bbcDictFile = "./data/BBC-term-index.txt";
 
     public static void main(String[] args) throws Exception {
         MultiThread ml = new MultiThread();
@@ -59,6 +56,8 @@ public class MultiThread extends Thread {
             settings.setReferenceModelPath(referenceModelPath);
             String AOLDictPath = br.readLine().replace("AOL dictionary file =", "").trim();
             settings.setAOLDictionaryPath(AOLDictPath);
+            String termIndexPath = br.readLine().replace("term index file =", "").trim();
+            settings.setTermIndexPath(termIndexPath);
             int numberOfThreads = Integer.parseInt(br.readLine().replace("number of threads =", "").trim());
             settings.setNumberOfThreads(numberOfThreads);
             br.close();
@@ -86,7 +85,7 @@ public class MultiThread extends Thread {
     private void createThreads() throws InterruptedException {
         try {
             MyThread[] myT = new MyThread[settings.getNumberOfThreads()];
-            SemanticEvaluation semEval = new SemanticEvaluation(bbcDictFile);
+            SemanticEvaluation semEval = new SemanticEvaluation(settings.getTermIndexPath());
             ArrayList<String> allUserId = getAllUserId(settings.getUserSearchLogPath(), -1);
             loadRefModel(settings.getReferenceModelPath());
             LoadLanguageModel llm = new LoadLanguageModel();
@@ -175,11 +174,11 @@ public class MultiThread extends Thread {
         ArrayList<String> lines = fiop.LoadFile(filename, -1);
         for (String line : lines) {
             line = line.trim();
-            String[] words = line.split(" ");
-            if (words.length == 2) { // for unigrams in the reference model
+            String[] words = line.split("\t");
+            if (words.length == 2) {
                 referenceModel.put(words[0], Float.valueOf(words[1]));
-            } else if (words.length == 3) { // for bigrams in the reference model
-                referenceModel.put(words[0] + " " + words[1], Float.valueOf(words[2]));
+            } else {
+                System.err.println("Error in " + filename + " format!");
             }
         }
     }

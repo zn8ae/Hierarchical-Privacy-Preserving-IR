@@ -5,9 +5,9 @@
  */
 package edu.virginia.cs.user;
 
-import edu.virginia.cs.utility.SpecialAnalyzer;
 import edu.virginia.cs.utility.StringTokenizer;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,10 +16,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.util.Version;
 
 /**
  *
@@ -31,7 +27,6 @@ public class UserProfile {
     private final HashMap<String, Double> IDFRecord;
     private HashMap<String, Float> referenceModel;
     private int totalTokens;
-    private final QueryParser parser;
     private double totalQueryLength;
     private double totalQuery;
 
@@ -41,10 +36,6 @@ public class UserProfile {
         totalTokens = 0;
         totalQuery = 0;
         totalQueryLength = 0;
-
-        SpecialAnalyzer analyzer = new SpecialAnalyzer();
-        parser = new QueryParser(Version.LUCENE_46, "", analyzer);
-        BooleanQuery.setMaxClauseCount(2048);
     }
 
     /**
@@ -84,22 +75,17 @@ public class UserProfile {
      */
     public void updateUserProfile(String queryText)
             throws IOException {
-        try {
-            Query textQuery = parser.parse(QueryParser.escape(queryText));
-            String[] qParts = textQuery.toString().split(" ");
-            totalQuery++;
-            totalQueryLength = totalQueryLength + qParts.length;
-            for (String qPart : qParts) {
-                if (qPart.isEmpty()) {
-                    continue;
-                }
-                totalTokens++;//for every token
-                Integer n = uProfile.get(qPart);
-                n = (n == null) ? 1 : ++n;
-                uProfile.put(qPart, n);
+        List<String> qParts = StringTokenizer.TokenizeString(queryText);
+        totalQuery++;
+        totalQueryLength = totalQueryLength + qParts.size();
+        for (String qPart : qParts) {
+            if (qPart.isEmpty()) {
+                continue;
             }
-        } catch (ParseException exception) {
-            exception.printStackTrace();
+            totalTokens++;//for every token
+            Integer n = uProfile.get(qPart);
+            n = (n == null) ? 1 : ++n;
+            uProfile.put(qPart, n);
         }
     }
 
@@ -129,7 +115,7 @@ public class UserProfile {
      * @return average query length
      */
     public double getAvgQueryLength() {
-        if (totalQuery < 1) {
+        if (totalQuery == 0) {
             return 3;
         }
         return totalQueryLength / totalQuery;

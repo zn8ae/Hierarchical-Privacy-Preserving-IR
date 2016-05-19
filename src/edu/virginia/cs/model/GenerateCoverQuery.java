@@ -439,12 +439,12 @@ public class GenerateCoverQuery {
      *
      * @param filename
      */
-    public void test(String filename) {
+    private void test(String filename) {
         BufferedReader br;
         FileWriter fw;
         try {
             br = new BufferedReader(new FileReader(new File(filename)));
-            fw = new FileWriter("./data/random_query_with_cover_query.txt");
+            fw = new FileWriter("./data/Random-Query-with-Cover-Query.txt");
             String line;
             while ((line = br.readLine()) != null) {
                 ArrayList<String> coverQueries = generateNQueries(line, 1, -1);
@@ -474,6 +474,6 @@ public class GenerateCoverQuery {
         llm.loadModels(3);
         ArrayList<LanguageModel> list = llm.getLanguageModels();
         GenerateCoverQuery GQ = new GenerateCoverQuery(list);
-        GQ.test("./data/random_1000_query.txt");
+        GQ.test("./data/Random-1000-Query.txt");
     }
 }

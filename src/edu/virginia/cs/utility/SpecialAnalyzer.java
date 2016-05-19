@@ -26,7 +26,7 @@ public class SpecialAnalyzer extends Analyzer {
         TokenStream filter = new StandardFilter(Version.LUCENE_46, source);
         filter = new LowerCaseFilter(Version.LUCENE_46, filter);
         filter = new LengthFilter(Version.LUCENE_46, filter, 2, 35);
-        filter = new PorterStemFilter(filter);
+//        filter = new PorterStemFilter(filter);
         return new TokenStreamComponents(source, filter);
     }
 }

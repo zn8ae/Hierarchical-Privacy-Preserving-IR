@@ -16,6 +16,7 @@ public class Settings {
     private String LanguageModelPath;
     private String ReferenceModelPath;
     private String AOLDictionaryPath;
+    private String termIndexPath;
     private int NumberOfCoverQuery;
     private int NumberOfThreads;
     private boolean ClientSideRanking;
@@ -58,6 +59,14 @@ public class Settings {
 
     public void setAOLDictionaryPath(String AOLDictionaryPath) {
         this.AOLDictionaryPath = AOLDictionaryPath;
+    }
+
+    public String getTermIndexPath() {
+        return termIndexPath;
+    }
+
+    public void setTermIndexPath(String termIndexPath) {
+        this.termIndexPath = termIndexPath;
     }
 
     public int getNumberOfCoverQuery() {
