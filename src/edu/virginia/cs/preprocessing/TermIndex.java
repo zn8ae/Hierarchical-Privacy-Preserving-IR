@@ -6,7 +6,9 @@
 package edu.virginia.cs.preprocessing;
 
 import edu.virginia.cs.utility.StringTokenizer;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,7 +50,7 @@ public class TermIndex {
     private static void readFile(String filename) {
         try {
             File inputFile = new File(filename);
-            AOLHandler aolHandler = new AOLHandler("./data/Term-Index");
+            AOLHandler aolHandler = new AOLHandler("./data/Term-Index", "./data/AOL-Dictionary");
             saxParser.parse(inputFile, aolHandler);
         } catch (SAXException | IOException ex) {
             Logger.getLogger(AOLDictionary.class.getName()).log(Level.SEVERE, null, ex);
@@ -65,11 +67,19 @@ class AOLHandler extends DefaultHandler {
     private int pageCount;
     private final HashMap<String, List<Integer>> Dictionary;
 
-    public AOLHandler(String filename) {
+    public AOLHandler(String filename, String dictFile) {
         buffer = new StringBuilder();
         Dictionary = new HashMap<>();
         try {
             fwriter = new FileWriter(filename);
+            BufferedReader br = new BufferedReader(new FileReader(new File(dictFile)));
+            String line = br.readLine();
+            while ((line = br.readLine()) != null) {
+                String[] split = line.split("\t");
+                List<Integer> temp = new ArrayList<>();
+                Dictionary.put(split[0], temp);
+            }
+            br.close();
         } catch (IOException ex) {
             Logger.getLogger(DataHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -97,16 +107,14 @@ class AOLHandler extends DefaultHandler {
             try {
                 int counter = 0;
                 for (String token : Dictionary.keySet()) {
-                    if (Dictionary.get(token).size() >= 10) {
-                        fwriter.write(token);
-                        for (int i : Dictionary.get(token)) {
-                            fwriter.write("\t" + i);
-                            fwriter.flush();
-                        }
-                        fwriter.write("\n");
+                    fwriter.write(token);
+                    for (int i : Dictionary.get(token)) {
+                        fwriter.write("\t" + i);
                         fwriter.flush();
-                        counter++;
                     }
+                    fwriter.write("\n");
+                    fwriter.flush();
+                    counter++;
                 }
                 fwriter.close();
                 System.out.println("Total tokens = " + counter);
@@ -139,11 +147,7 @@ class AOLHandler extends DefaultHandler {
         HashSet<String> tokenSet = new HashSet<>(param);
         for (String token : tokenSet) {
             List<Integer> list = Dictionary.get(token);
-            if (list == null) {
-                list = new ArrayList<>();
-                list.add(docId);
-                Dictionary.put(token, list);
-            } else {
+            if (list != null) {
                 list.add(docId);
             }
         }

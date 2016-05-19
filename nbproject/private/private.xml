@@ -3,7 +3,22 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/language/model/utility/Stopwords.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/preprocessing/TermIndex.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/user/ReferenceModel.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/preprocessing/DMOZDictionary.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/model/GenerateCoverQuery.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/eval/MultiThread.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/eval/PlausibilityEvaluation.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/utility/StringTokenizer.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/utility/FileOperations.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/eval/SemanticEvaluation.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/preprocessing/AOLDictionary.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/utility/SpecialAnalyzer.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/user/UserProfile.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/user/UserSession.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/eval/Evaluate.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/model/LanguageModelGenerator.java</file>
+            <file>file:/F:/UVA/Spring%202016/CS%206501%20-%20003/Project%20Work/Project%20Repository/LMPP/src/edu/virginia/cs/utility/Settings.java</file>
         </group>
     </open-files>
 </project-private>
