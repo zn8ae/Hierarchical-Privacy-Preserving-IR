@@ -15,11 +15,11 @@ import edu.virginia.cs.utility.FileOperations;
  * @author Wasi
  */
 public class LoadLanguageModel {
-
+    
     private final ArrayList<LanguageModel> languageModels;
     private final FileOperations fiop;
     private int level;
-
+    
     public LoadLanguageModel() {
         languageModels = new ArrayList<>();
         fiop = new FileOperations();
@@ -141,13 +141,14 @@ public class LoadLanguageModel {
         LM.setMaxMinProb("bigram");
         LM.setMaxMinProb("trigram");
         LM.setMaxMinProb("fourgram");
+        LM.setTopic_id(languageModels.size());
         languageModels.add(LM);
         return LM;
     }
-
+    
     public static void main(String[] args) {
         LoadLanguageModel llm = new LoadLanguageModel();
         llm.loadModels(3);
     }
-
+    
 }

@@ -44,6 +44,12 @@ public class LanguageModelGenerator {
     private int NumberOfBigrams;
     private int NumberOfTrigrams;
     private int NumberOfFourGrams;
+    private final StringTokenizer tokenizer;
+
+    public LanguageModelGenerator() {
+        /* No stopword removal and no stemming during language model generation */
+        tokenizer = new StringTokenizer(false, false);
+    }
 
     /**
      * Initialize every variable.
@@ -69,7 +75,7 @@ public class LanguageModelGenerator {
         String previousTrigram = ""; // for four-grams
         String previousBigram = ""; // for trigrams
         String previousUnigram = ""; // for bigrams
-        List<String> tokens = StringTokenizer.TokenizeString(document);
+        List<String> tokens = tokenizer.TokenizeString(document);
         for (String token : tokens) {
             if (!token.isEmpty()) {
                 if (DictionaryOfUnigrams.containsKey(token)) {

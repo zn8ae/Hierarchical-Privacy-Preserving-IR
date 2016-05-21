@@ -35,7 +35,7 @@ public class DMOZDictionary {
         try {
             factory = SAXParserFactory.newInstance();
             saxParser = factory.newSAXParser();
-            readFile("./data/DMOZ-Crawled-Data-Level-4.xml");
+            readFile("./data/xml/DMOZ-Crawled-Data-Level-4.xml");
         } catch (ParserConfigurationException | SAXException ex) {
             Logger.getLogger(DMOZDictionary.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -60,10 +60,12 @@ class DMOZDataHandler extends DefaultHandler {
     private int docCount;
     private int tokenCount;
     private final HashMap<String, Integer> Dictionary;
+    private final StringTokenizer tokenizer;
 
     public DMOZDataHandler(String filename) {
         buffer = new StringBuilder();
         Dictionary = new HashMap<>();
+        tokenizer = new StringTokenizer(true, true);
         try {
             fwriter = new FileWriter(filename);
         } catch (IOException ex) {
@@ -114,7 +116,7 @@ class DMOZDataHandler extends DefaultHandler {
         } else if (qName.equalsIgnoreCase("content")) {
             if (isContent) {
                 isContent = false;
-                StoreInDictionary(StringTokenizer.TokenizeString(buffer.toString()));
+                StoreInDictionary(tokenizer.TokenizeString(buffer.toString()));
             }
         }
     }
@@ -128,8 +130,8 @@ class DMOZDataHandler extends DefaultHandler {
     }
 
     private void StoreInDictionary(List<String> param) {
-        HashSet<String> tokenSet = new HashSet<>(param);
-        for (String token : tokenSet) {
+//        HashSet<String> tokenSet = new HashSet<>(param);
+        for (String token : param) {
             if (Dictionary.containsKey(token)) {
                 Dictionary.put(token, Dictionary.get(token) + 1);
             } else {

@@ -39,7 +39,7 @@ public class AOLDictionary {
         try {
             factory = SAXParserFactory.newInstance();
             saxParser = factory.newSAXParser();
-            readFile("./data/AolCrawledData.xml");
+            readFile("./data/xml/AolCrawledData.xml");
         } catch (ParserConfigurationException | SAXException ex) {
             Logger.getLogger(AOLDictionary.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -48,8 +48,8 @@ public class AOLDictionary {
     private static void readFile(String filename) {
         try {
             File inputFile = new File(filename);
-            DataHandler dataHandler = new DataHandler("./data/AOL-Dictionary-TF");
-//            DataHandler dataHandler = new DataHandler("./data/AOL-Dictionary");
+//            DataHandler dataHandler = new DataHandler("./data/AOL-Dictionary-TF");
+            DataHandler dataHandler = new DataHandler("./data/AOL-Dictionary");
             saxParser.parse(inputFile, dataHandler);
         } catch (SAXException | IOException ex) {
             Logger.getLogger(AOLDictionary.class.getName()).log(Level.SEVERE, null, ex);
@@ -65,10 +65,12 @@ class DataHandler extends DefaultHandler {
     private int pageCount;
     private int tokenCount;
     private final HashMap<String, Integer> Dictionary;
+    private final StringTokenizer tokenizer;
 
     public DataHandler(String filename) {
         buffer = new StringBuilder();
         Dictionary = new HashMap<>();
+        tokenizer = new StringTokenizer(true, true);
         try {
             fwriter = new FileWriter(filename);
         } catch (IOException ex) {
@@ -106,8 +108,8 @@ class DataHandler extends DefaultHandler {
                     }
                 }
                 fwriter.close();
-                System.out.println("Total tokens = " + tokenCount);
-//                System.out.println("Total pages = " + pageCount);
+//                System.out.println("Total tokens = " + tokenCount);
+                System.out.println("Total pages = " + pageCount);
             } catch (IOException ex) {
                 Logger.getLogger(DataHandler.class
                         .getName()).log(Level.SEVERE, null, ex);
@@ -115,7 +117,7 @@ class DataHandler extends DefaultHandler {
         } else if (qName.equalsIgnoreCase("page")) {
             if (buffer.toString().length() > 0) {
                 pageCount++;
-                StoreInDictionary(StringTokenizer.TokenizeString(buffer.toString()));
+                StoreInDictionary(tokenizer.TokenizeString(buffer.toString()));
             }
             if (pageCount % 10000 == 0) {
                 System.out.println(pageCount + " pages completed...!");
@@ -134,8 +136,8 @@ class DataHandler extends DefaultHandler {
     }
 
     private void StoreInDictionary(List<String> param) {
-//        HashSet<String> tokenSet = new HashSet<>(param);
-        for (String token : param) {
+        HashSet<String> tokenSet = new HashSet<>(param);
+        for (String token : tokenSet) {
             if (Dictionary.containsKey(token)) {
                 Dictionary.put(token, Dictionary.get(token) + 1);
             } else {

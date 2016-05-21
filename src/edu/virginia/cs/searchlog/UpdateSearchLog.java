@@ -35,11 +35,13 @@ public class UpdateSearchLog {
     private ArrayList<String> listQueries;
     private Searcher _searcher = null;
     private final SpecialAnalyzer analyzer;
+    private final StringTokenizer tokenizer;
     private final QueryParser parser;
 
     public UpdateSearchLog() {
         _searcher = new Searcher(_indexPath);
-        analyzer = new SpecialAnalyzer();
+        analyzer = new SpecialAnalyzer(true, true);
+        tokenizer = new StringTokenizer(true, true);
         parser = new QueryParser(Version.LUCENE_46, "", analyzer);
     }
 
@@ -61,7 +63,7 @@ public class UpdateSearchLog {
 
                 String url = reader.readLine();
                 String docContent = _searcher.search(url, "clicked_url");
-                HashSet<String> tokSet = new HashSet<>(StringTokenizer.TokenizeString(docContent));
+                HashSet<String> tokSet = new HashSet<>(tokenizer.TokenizeString(docContent));
 
                 int tokMatched = 0;
                 for (String part : qParts) {

@@ -15,6 +15,7 @@ import java.util.Map.Entry;
  */
 public class LanguageModel {
 
+    private int topic_id;
     private String topic_name;
     private HashMap<String, Integer> unigramLM;
     private HashMap<String, Integer> bigramLM;
@@ -42,6 +43,24 @@ public class LanguageModel {
         this.fourgramLM = new HashMap<>();
         this.listOfChildren = new ArrayList<>();
         lambda = 0.9;
+    }
+
+    /**
+     * Return the topic id of the language model.
+     *
+     * @return topic id of the language model
+     */
+    public int getTopic_id() {
+        return topic_id;
+    }
+
+    /**
+     * Set the topic id of the language model.
+     *
+     * @param topicId
+     */
+    public void setTopic_id(int topicId) {
+        this.topic_id = topicId;
     }
 
     /**
@@ -145,7 +164,7 @@ public class LanguageModel {
 
     /**
      * Returns total number of unigrams in the language model.
-     * 
+     *
      * @return
      */
     public int getTotalUnigrams() {
@@ -154,7 +173,7 @@ public class LanguageModel {
 
     /**
      * Sets total number of unigrams of the language model.
-     * 
+     *
      * @param totalUnigrams
      */
     public void setTotalUnigrams(int totalUnigrams) {
@@ -219,8 +238,8 @@ public class LanguageModel {
 
     /**
      * Checks whether a language model is empty or not.
-     * 
-     * @return 
+     *
+     * @return
      */
     public boolean isEmpty() {
         return unigramLM.isEmpty();
@@ -228,7 +247,7 @@ public class LanguageModel {
 
     /**
      * Computes joint probability or conditional probability of a unigram.
-     * 
+     *
      * @param unigram
      * @return
      */
@@ -245,7 +264,7 @@ public class LanguageModel {
 
     /**
      * Computes joint probability or conditional probability of a bigram.
-     * 
+     *
      * @param bigram
      * @param isJoint
      * @return
@@ -307,6 +326,35 @@ public class LanguageModel {
         String prevTrigram = split[0] + " " + split[1] + " " + split[2];
         if (fourgramLM.containsKey(fourgram)) {
             prob = (1.0 - lambda) * (fourgramLM.get(fourgram) / trigramLM.get(prevTrigram));
+        } else {
+            prob = 0.0;
+        }
+        String trigram = split[1] + " " + split[2] + " " + split[3];
+        prob += lambda * getProbabilityTrigram(trigram, false);
+        if (isJoint) {
+            prob *= getProbabilityBigram(prevTrigram, false);
+            String bigram = split[0] + " " + split[1];
+            prob *= getProbabilityBigram(bigram, false);
+            prob *= getProbabilityUnigram(split[0]);
+        }
+        return prob;
+    }
+
+    /**
+     * Computes joint probability or conditional probability of a n-gram where
+     * n>4.
+     *
+     * @param ngram
+     * @param isJoint
+     * @return
+     */
+    public double getProbabilityNgram(String ngram, boolean isJoint) {
+        double prob;
+        /* Computing probability of a fourgram using linear interpolation smoothing */
+        String[] split = ngram.split(" ");
+        String prevTrigram = split[0] + " " + split[1] + " " + split[2];
+        if (fourgramLM.containsKey(ngram)) {
+            prob = (1.0 - lambda) * (fourgramLM.get(ngram) / trigramLM.get(prevTrigram));
         } else {
             prob = 0.0;
         }
@@ -384,7 +432,7 @@ public class LanguageModel {
 
     /**
      * Returns the level of the language model in the tree hierarchy.
-     * 
+     *
      * @return
      */
     public int getLevel() {
@@ -393,7 +441,7 @@ public class LanguageModel {
 
     /**
      * Sets the level of the language model in the tree hierarchy.
-     * 
+     *
      * @param level
      */
     public void setLevel(int level) {
@@ -402,7 +450,7 @@ public class LanguageModel {
 
     /**
      * Returns the upper bound of the unigram language model.
-     * 
+     *
      * @return maximum probability
      */
     public double getMaxProbUnigram() {
@@ -411,7 +459,7 @@ public class LanguageModel {
 
     /**
      * Returns the lower bound of the unigram language model.
-     * 
+     *
      * @return
      */
     public double getMinProbUnigram() {
@@ -420,7 +468,7 @@ public class LanguageModel {
 
     /**
      * Returns the upper bound of the bigram language model.
-     * 
+     *
      * @return
      */
     public double getMaxProbBigram() {
@@ -429,7 +477,7 @@ public class LanguageModel {
 
     /**
      * Returns the lower bound of the bigram language model.
-     * 
+     *
      * @return
      */
     public double getMinProbBigram() {
@@ -438,7 +486,7 @@ public class LanguageModel {
 
     /**
      * Returns the upper bound of the trigram language model.
-     * 
+     *
      * @return
      */
     public double getMaxProbTrigram() {
@@ -447,7 +495,7 @@ public class LanguageModel {
 
     /**
      * Returns the lower bound of the trigram language model.
-     * 
+     *
      * @return
      */
     public double getMinProbTrigram() {
@@ -456,7 +504,7 @@ public class LanguageModel {
 
     /**
      * Returns the upper bound of the fourgram language model.
-     * 
+     *
      * @return
      */
     public double getMaxProbFourgram() {
@@ -465,7 +513,7 @@ public class LanguageModel {
 
     /**
      * Returns the lower bound of the fourgram language model.
-     * 
+     *
      * @return
      */
     public double getMinProbFourgram() {

@@ -40,7 +40,7 @@ public class Indexer {
 
     /**
      * Start creating the lucene index.
-     * 
+     *
      * @param indexPath
      * @param filename
      */
@@ -95,7 +95,7 @@ class DataHandler extends DefaultHandler {
      * @throws IOException
      */
     private void setupIndex(String indexPath) throws IOException {
-        Analyzer analyzer = new SpecialAnalyzer();///special analyzer used here
+        Analyzer analyzer = new SpecialAnalyzer(true, true);
         IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_46,
                 analyzer);
         config.setOpenMode(OpenMode.CREATE);

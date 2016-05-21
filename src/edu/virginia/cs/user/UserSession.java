@@ -7,7 +7,6 @@ package edu.virginia.cs.user;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 
 /**
  *
@@ -16,11 +15,13 @@ import java.util.HashSet;
 public class UserSession {
 
     private final ArrayList<Query> allQueriesInSession;
-    private final HashMap<Integer, HashSet<String>> originalQueryToCoverQuery;
+    private final HashMap<Integer, ArrayList<String>> originalQueryToCoverQuery;
+    private final HashMap<Integer, ArrayList<Integer>> coverQueryTopics;
 
     public UserSession() {
         allQueriesInSession = new ArrayList<>();
         originalQueryToCoverQuery = new HashMap<>();
+        coverQueryTopics = new HashMap<>();
     }
 
     /**
@@ -39,9 +40,17 @@ public class UserSession {
      * @param origQueryId
      * @param coverQueries
      */
-    public void addCoverQuery(int origQueryId, ArrayList<String> coverQueries) {
-        HashSet<String> tempSet = new HashSet<>(coverQueries);
-        originalQueryToCoverQuery.put(origQueryId, tempSet);
+    public void setCoverQueries(int origQueryId, ArrayList<String> coverQueries) {
+        originalQueryToCoverQuery.put(origQueryId, coverQueries);
+    }
+
+    /**
+     *
+     * @param origQueryId
+     * @param cQuTopics
+     */
+    public void setCoverQueryTopics(int origQueryId, ArrayList<Integer> cQuTopics) {
+        coverQueryTopics.put(origQueryId, cQuTopics);
     }
 
     /**
@@ -71,6 +80,19 @@ public class UserSession {
     }
 
     /**
+     *
+     * @return
+     */
+    public ArrayList<Integer> getCoverQuTopicsOfLastQuery() {
+        if (allQueriesInSession.isEmpty()) {
+            return null;
+        } else {
+            int id = allQueriesInSession.get(allQueriesInSession.size() - 1).getQueryId();
+            return coverQueryTopics.get(id);
+        }
+    }
+
+    /**
      * Return all cover queries which were generated previously for a user
      * query.
      *
@@ -78,11 +100,7 @@ public class UserSession {
      * @return
      */
     public ArrayList<String> getCoverQueries(int queryId) {
-        ArrayList<String> coverQueries = new ArrayList<>();
-        for (String coverQuery : originalQueryToCoverQuery.get(queryId)) {
-            coverQueries.add(coverQuery);
-        }
-        return coverQueries;
+        return originalQueryToCoverQuery.get(queryId);
     }
 }
 

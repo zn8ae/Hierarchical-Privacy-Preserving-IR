@@ -7,7 +7,6 @@ package edu.virginia.cs.user;
 
 import edu.virginia.cs.utility.StringTokenizer;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import org.apache.lucene.queryparser.classic.ParseException;
 
 /**
  *
@@ -75,7 +73,8 @@ public class UserProfile {
      */
     public void updateUserProfile(String queryText)
             throws IOException {
-        List<String> qParts = StringTokenizer.TokenizeString(queryText);
+        StringTokenizer st = new StringTokenizer(true, true);
+        List<String> qParts = st.TokenizeString(queryText);
         totalQuery++;
         totalQueryLength = totalQueryLength + qParts.size();
         for (String qPart : qParts) {
@@ -97,7 +96,8 @@ public class UserProfile {
      */
     public void updateUserProfileUsingClickedDocument(String content)
             throws IOException {
-        List<String> tokens = StringTokenizer.TokenizeString(content);
+        StringTokenizer st = new StringTokenizer(true, true);
+        List<String> tokens = st.TokenizeString(content);
         /* To update user profile, select the top 10 tokens using tf-idf weight */
         HashMap<String, Integer> retVal = selectTopKtokens(tokens, 10);
         for (Map.Entry<String, Integer> entry : retVal.entrySet()) {

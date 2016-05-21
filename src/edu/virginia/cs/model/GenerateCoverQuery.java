@@ -12,10 +12,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,10 +26,14 @@ import edu.virginia.cs.utility.StringTokenizer;
 public class GenerateCoverQuery {
 
     private final ArrayList<LanguageModel> languageModels;
-    private int lastQueryTopicNo;
+    private ArrayList<Integer> coverQueryTopics;
+    private int currentQueryTopicNo;
+    private final StringTokenizer tokenizer;
 
     public GenerateCoverQuery(ArrayList<LanguageModel> list) {
         languageModels = list;
+        /* No stopword removal and no stemming during inference and generation step */
+        tokenizer = new StringTokenizer(false, false);
     }
 
     /**
@@ -71,18 +73,35 @@ public class GenerateCoverQuery {
      * Computes and return a cover query topic.
      *
      * @param level
+     * @param queryTopic
+     * @param fromSibling
      * @return the cover query topic
      */
-    private LanguageModel getCoverQueryTopic(int level) {
+    private LanguageModel getCoverQueryTopic(int level, int queryTopic, boolean fromSibling) {
         ArrayList<LanguageModel> listModels = new ArrayList<>();
-        for (LanguageModel lm : languageModels) {
-            if (lm.getLevel() == level) {
-                listModels.add(lm);
+        if (fromSibling) {
+            /**
+             * Selecting a cover query topic only from sibling topics.
+             */
+            int topicId = languageModels.get(queryTopic).getTopic_id();
+            for (LanguageModel lm : languageModels.get(queryTopic).getParent().getListOfChildren()) {
+                if (lm.getTopic_id() != topicId) {
+                    listModels.add(lm);
+                }
+            }
+        } else {
+            /**
+             * Selecting a cover query topic from same level but no from sibling
+             * topics.
+             */
+            int parentTopicId = languageModels.get(queryTopic).getParent().getTopic_id();
+            for (LanguageModel lm : languageModels) {
+                if (lm.getLevel() == level && lm.getParent().getTopic_id() != parentTopicId) {
+                    listModels.add(lm);
+                }
             }
         }
         int topic = getRandom(0, listModels.size());
-//        System.out.println("cover query topic = " + listModels.get(topic).getTopic_name());
-//        System.out.println("cover query topic parent = " + listModels.get(topic).getParent().getTopic_name());
         return listModels.get(topic);
     }
 
@@ -91,11 +110,18 @@ public class GenerateCoverQuery {
      *
      * @param level
      * @param bucketNum
+     * @param trueQuTopic
+     * @param fromSibling
+     * @param coverQuTopic
      * @return the cover query
      */
-    private String getCQfromUnigramLM(int level, int bucketNum) {
-        LanguageModel lm = getCoverQueryTopic(level);
-//        System.out.println(lm.toString());
+    private String getCQfromUnigramLM(int level, int bucketNum, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
+        LanguageModel lm;
+        if (coverQuTopic == -1) {
+            lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
+        } else {
+            lm = languageModels.get(coverQuTopic);
+        }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbUnigram();
         double min = lm.getMinProbUnigram();
@@ -105,8 +131,16 @@ public class GenerateCoverQuery {
             }
         }
         if (possibleCoverQ.size() > 0) {
-            int coverQNum = getRandom(0, possibleCoverQ.size());
-            return possibleCoverQ.get(coverQNum);
+            StringTokenizer st = new StringTokenizer(true, true);
+            for (int i = 0; i < possibleCoverQ.size(); i++) {
+                int coverQNum = getRandom(0, possibleCoverQ.size());
+                String cQuery = possibleCoverQ.get(coverQNum);
+                if (st.TokenizeString(cQuery).size() == 1) {
+                    coverQueryTopics.add(lm.getTopic_id());
+                    return cQuery;
+                }
+            }
+            return null;
         } else {
             return null;
         }
@@ -117,22 +151,37 @@ public class GenerateCoverQuery {
      *
      * @param level
      * @param bucketNum
+     * @param trueQuTopic
+     * @param fromSibling
+     * @param coverQuTopic
      * @return the cover query
      */
-    private String getCQfromBigramLM(int level, int bucketNum) {
-        LanguageModel lm = getCoverQueryTopic(level);
-//        System.out.println(lm.toString());
+    private String getCQfromBigramLM(int level, int bucketNum, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
+        LanguageModel lm;
+        if (coverQuTopic == -1) {
+            lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
+        } else {
+            lm = languageModels.get(coverQuTopic);
+        }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
-        double max = lm.getMaxProbUnigram();
-        double min = lm.getMinProbUnigram();
+        double max = lm.getMaxProbBigram();
+        double min = lm.getMinProbBigram();
         for (Map.Entry<String, Integer> entry : lm.getBigramLM().entrySet()) {
             if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
                 possibleCoverQ.add(entry.getKey());
             }
         }
         if (possibleCoverQ.size() > 0) {
-            int coverQNum = getRandom(0, possibleCoverQ.size());
-            return possibleCoverQ.get(coverQNum);
+            StringTokenizer st = new StringTokenizer(true, true);
+            for (int i = 0; i < possibleCoverQ.size(); i++) {
+                int coverQNum = getRandom(0, possibleCoverQ.size());
+                String cQuery = possibleCoverQ.get(coverQNum);
+                if (st.TokenizeString(cQuery).size() == 2) {
+                    coverQueryTopics.add(lm.getTopic_id());
+                    return cQuery;
+                }
+            }
+            return null;
         } else {
             return null;
         }
@@ -143,14 +192,21 @@ public class GenerateCoverQuery {
      *
      * @param level
      * @param bucketNum
+     * @param trueQuTopic
+     * @param fromSibling
+     * @param coverQuTopic
      * @return the cover query
      */
-    private String getCQfromTrigramLM(int level, int bucketNum) {
-        LanguageModel lm = getCoverQueryTopic(level);
-//        System.out.println(lm.toString());
+    private String getCQfromTrigramLM(int level, int bucketNum, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
+        LanguageModel lm;
+        if (coverQuTopic == -1) {
+            lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
+        } else {
+            lm = languageModels.get(coverQuTopic);
+        }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
-        double max = lm.getMaxProbUnigram();
-        double min = lm.getMinProbUnigram();
+        double max = lm.getMaxProbTrigram();
+        double min = lm.getMinProbTrigram();
         for (Map.Entry<String, Integer> entry : lm.getTrigramLM().entrySet()) {
             if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
                 possibleCoverQ.add(entry.getKey());
@@ -158,6 +214,7 @@ public class GenerateCoverQuery {
         }
         if (possibleCoverQ.size() > 0) {
             int coverQNum = getRandom(0, possibleCoverQ.size());
+            coverQueryTopics.add(lm.getTopic_id());
             return possibleCoverQ.get(coverQNum);
         } else {
             return null;
@@ -169,14 +226,21 @@ public class GenerateCoverQuery {
      *
      * @param level
      * @param bucketNum
+     * @param trueQuTopic
+     * @param fromSibling
+     * @param coverQuTopic
      * @return the cover query
      */
-    private String getCQfromFourgramLM(int level, int bucketNum) {
-        LanguageModel lm = getCoverQueryTopic(level);
-//        System.out.println(lm.toString());
+    private String getCQfromFourgramLM(int level, int bucketNum, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
+        LanguageModel lm;
+        if (coverQuTopic == -1) {
+            lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
+        } else {
+            lm = languageModels.get(coverQuTopic);
+        }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
-        double max = lm.getMaxProbUnigram();
-        double min = lm.getMinProbUnigram();
+        double max = lm.getMaxProbFourgram();
+        double min = lm.getMinProbFourgram();
         for (Map.Entry<String, Integer> entry : lm.getFourgramLM().entrySet()) {
             if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
                 possibleCoverQ.add(entry.getKey());
@@ -184,6 +248,7 @@ public class GenerateCoverQuery {
         }
         if (possibleCoverQ.size() > 0) {
             int coverQNum = getRandom(0, possibleCoverQ.size());
+            coverQueryTopics.add(lm.getTopic_id());
             return possibleCoverQ.get(coverQNum);
         } else {
             return null;
@@ -195,11 +260,18 @@ public class GenerateCoverQuery {
      *
      * @param level
      * @param bucketNum
+     * @param trueQuTopic
+     * @param fromSibling
+     * @param coverQuTopic
      * @return the cover query
      */
-    private String getCQfromNgramLM(int level, int bucketNum) {
-        LanguageModel lm = getCoverQueryTopic(level);
-//        System.out.println(lm.toString());
+    private String getCQfromNgramLM(int level, int bucketNum, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
+        LanguageModel lm;
+        if (coverQuTopic == -1) {
+            lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
+        } else {
+            lm = languageModels.get(coverQuTopic);
+        }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbUnigram();
         double min = lm.getMinProbUnigram();
@@ -210,6 +282,7 @@ public class GenerateCoverQuery {
         }
         if (possibleCoverQ.size() > 0) {
             int coverQNum = getRandom(0, possibleCoverQ.size());
+            coverQueryTopics.add(lm.getTopic_id());
             return possibleCoverQ.get(coverQNum);
         } else {
             return null;
@@ -225,29 +298,31 @@ public class GenerateCoverQuery {
      * @param queryLength
      * @param bucketNum
      * @param level
+     * @param trueQuTopic
+     * @param fromSibling
+     * @param coverQuTopic
      */
-    private String generateCoverQuery(int queryLength, int bucketNum, int level) {
+    private String generateCoverQuery(int queryLength, int bucketNum, int level, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
         int coverQuLen = getPoisson(queryLength);
-//        System.err.println(coverQuLen);
         if (coverQuLen == 0) {
             return null;
         }
         String coverQ;
         switch (coverQuLen) {
             case 1:
-                coverQ = getCQfromUnigramLM(level, bucketNum);
+                coverQ = getCQfromUnigramLM(level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
                 break;
             case 2:
-                coverQ = getCQfromBigramLM(level, bucketNum);
+                coverQ = getCQfromBigramLM(level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
                 break;
             case 3:
-                coverQ = getCQfromTrigramLM(level, bucketNum);
+                coverQ = getCQfromTrigramLM(level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
                 break;
             case 4:
-                coverQ = getCQfromFourgramLM(level, bucketNum);
+                coverQ = getCQfromFourgramLM(level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
                 break;
             default:
-                coverQ = getCQfromNgramLM(level, bucketNum);
+                coverQ = getCQfromNgramLM(level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
                 break;
         }
         return coverQ;
@@ -291,9 +366,9 @@ public class GenerateCoverQuery {
      * @param n
      * @return
      */
-    private int getBestTopic(List<String> tokens, int n) {
+    private int getBestTopic(String query, int n) {
         /* probability of query according to best unigram language model */
-        double MaxScore = 0.0;
+        double maxProb = 0.0;
         /* topic index of the best unigram language model */
         int topicNo = -1;
         int index = 0;
@@ -301,24 +376,20 @@ public class GenerateCoverQuery {
             if (lm.isEmpty()) {
                 continue;
             }
-            double score = 0.0;
-            for (String token : tokens) {
-                Double prob = null;
-                if (n == 1) {
-                    prob = lm.getProbabilityUnigram(token);
-                } else if (n == 2) {
-                    prob = lm.getProbabilityBigram(token, true);
-                } else if (n == 3) {
-                    prob = lm.getProbabilityTrigram(token, true);
-                } else if (n == 4) {
-                    prob = lm.getProbabilityFourgram(token, true);
-                }
-                if (prob != null) {
-                    score += prob;
-                }
+            double prob;
+            if (n == 1) {
+                prob = lm.getProbabilityUnigram(query);
+            } else if (n == 2) {
+                prob = lm.getProbabilityBigram(query, true);
+            } else if (n == 3) {
+                prob = lm.getProbabilityTrigram(query, true);
+            } else if (n == 4) {
+                prob = lm.getProbabilityFourgram(query, true);
+            } else {
+                prob = lm.getProbabilityNgram(query, true);
             }
-            if (score > MaxScore) {
-                MaxScore = score;
+            if (prob > maxProb) {
+                maxProb = prob;
                 topicNo = index;
             }
             index++;
@@ -328,31 +399,21 @@ public class GenerateCoverQuery {
 
     /**
      * Generate a list of integers where the first value is the query length,
-     * second value is the inferred topic number and rest of the values
-     * represent bucket numbers to which the query tokens belong.
+     * second value is the inferred topic number and the last one is the bucket
+     * number from to which the query belongs.
      *
      * @param query true user query
      * @return list of integers
      */
     private ArrayList<Integer> getScore(String query) {
         ArrayList<Integer> scores = new ArrayList<>();
-        List<String> tokens = StringTokenizer.TokenizeString(query);
-        int topicNo = -1;
-        if (tokens.size() == 1 || tokens.size() > 4) {
-            topicNo = getBestTopic(tokens, 1);
-        } else if (tokens.size() == 2) {
-            List<String> tempTokens = new ArrayList<>();
-            tempTokens.add(tokens.get(0) + " " + tokens.get(1));
-            topicNo = getBestTopic(tempTokens, 2);
-        } else if (tokens.size() == 3) {
-            List<String> tempTokens = new ArrayList<>();
-            tempTokens.add(tokens.get(0) + " " + tokens.get(1) + " " + tokens.get(2));
-            topicNo = getBestTopic(tempTokens, 3);
-        } else if (tokens.size() == 4) {
-            List<String> tempTokens = new ArrayList<>();
-            tempTokens.add(tokens.get(0) + " " + tokens.get(1) + " " + tokens.get(2) + " " + tokens.get(3));
-            topicNo = getBestTopic(tempTokens, 4);
+        List<String> tokens = tokenizer.TokenizeString(query);
+        String modifiedQuery = "";
+        for (String token : tokens) {
+            modifiedQuery += token + " ";
         }
+        modifiedQuery = modifiedQuery.trim();
+        int topicNo = getBestTopic(modifiedQuery, tokens.size());
         scores.add(tokens.size());
         scores.add(topicNo);
 //        System.out.println(topicNo + " " + MaxScore);
@@ -361,13 +422,78 @@ public class GenerateCoverQuery {
 //        System.out.println("Grand Parent topic: " + languageModels.get(topicNo).getParent().getParent().getTopic_name());
 
         LanguageModel selectedModel = languageModels.get(topicNo);
-        double max = selectedModel.getMaxProbUnigram();
-        double min = selectedModel.getMinProbUnigram();
-        for (String token : tokens) {
-            Double prob = selectedModel.getProbabilityUnigram(token);
+        double max, min;
+        int n = tokens.size();
+        if (n == 1) {
+            max = selectedModel.getMaxProbUnigram();
+            min = selectedModel.getMinProbUnigram();
+            double prob = selectedModel.getProbabilityUnigram(modifiedQuery);
+            scores.add(getBucketNumber(prob, max, min));
+        } else if (n == 2) {
+            max = selectedModel.getMaxProbBigram();
+            min = selectedModel.getMinProbBigram();
+            double prob = selectedModel.getProbabilityBigram(modifiedQuery, true);
+            scores.add(getBucketNumber(prob, max, min));
+        } else if (n == 3) {
+            max = selectedModel.getMaxProbTrigram();
+            min = selectedModel.getMinProbTrigram();
+            double prob = selectedModel.getProbabilityTrigram(modifiedQuery, true);
+            scores.add(getBucketNumber(prob, max, min));
+        } else {
+            max = selectedModel.getMaxProbFourgram();
+            min = selectedModel.getMinProbFourgram();
+            double prob;
+            if (n == 4) {
+                prob = selectedModel.getProbabilityFourgram(modifiedQuery, true);
+            } else {
+                /**
+                 * if user query of length greater than 4, consider only the
+                 * first 4-gram to infer bucket number.
+                 */
+                String tempQuery = "";
+                for (int i = 0; i < 4; i++) {
+                    tempQuery += tokens.get(i) + " ";
+                }
+                tempQuery = tempQuery.trim();
+                prob = selectedModel.getProbabilityFourgram(tempQuery, true);
+            }
             scores.add(getBucketNumber(prob, max, min));
         }
         return scores;
+    }
+
+    /**
+     * Check if the user query is sequentially edited or not.
+     *
+     * @param previousQuTopic
+     * @param currentQuTopic
+     * @return
+     */
+    private int checkSequentialEdited(int previousQuTopic, int currentQuTopic) {
+        int currentTopicId = languageModels.get(currentQuTopic).getParent().getTopic_id();
+        int parentId = languageModels.get(previousQuTopic).getParent().getTopic_id();
+        /**
+         * Check if current query topic is the parent of previous query topic,
+         * then sequential editing is true.
+         */
+        if (parentId == currentTopicId) {
+            return 1;
+        }
+        /**
+         * Check if current query topic is the child of previous query topic,
+         * then sequential editing is true.
+         */
+        for (LanguageModel lm : languageModels.get(previousQuTopic).getListOfChildren()) {
+            int childTopicId = lm.getTopic_id();
+            if (childTopicId == currentTopicId) {
+                return -1;
+            }
+        }
+        /**
+         * Current query topic is neither parent nor child of the previous query
+         * topic, so return 0.
+         */
+        return 0;
     }
 
     /**
@@ -376,32 +502,70 @@ public class GenerateCoverQuery {
      *
      * @param query true user query
      * @param N number of cover queries required
-     * @param lastQueryTopicNo
+     * @param previousQueryTopicNo -1 if the previous query and current query
+     * belong to the same session.
+     * @param coverQTopics
      * @return list of cover queries
      */
-    public ArrayList<String> generateNQueries(String query, int N, int lastQueryTopicNo) {
-        ArrayList<String> retValue = new ArrayList<>();
+    public ArrayList<String> generateNQueries(String query, int N, int previousQueryTopicNo, ArrayList<Integer> coverQTopics) {
+        ArrayList<String> coverQueries = new ArrayList<>();
         ArrayList<Integer> scores = getScore(query);
         if (scores.get(1) == -1) {
             /* if topic of the query can not be inferred */
             return null;
         }
-//        System.out.println(scores.toString());
-        lastQueryTopicNo = scores.get(1);
-        int queryTopicLevel = languageModels.get(lastQueryTopicNo).getLevel();
-        Integer bucketNum = mostCommon(new ArrayList<Integer>(scores.subList(2, scores.size())));
+        currentQueryTopicNo = scores.get(1);
+        int currentQueryTopicLevel = languageModels.get(currentQueryTopicNo).getLevel();
+        int seqEdited = 0;
+        if (previousQueryTopicNo != -1) {
+            seqEdited = checkSequentialEdited(previousQueryTopicNo, currentQueryTopicNo);
+        }
+        int bucketNum = scores.get(2);
         int count = 0;
+        coverQueryTopics = new ArrayList<>();
         while (true) {
-            String cQuery = generateCoverQuery(scores.get(0), bucketNum, queryTopicLevel);
+            String cQuery;
+            if (seqEdited == 0) {
+                /* Current query is not sequentially edited. */
+                if (count < N / 2) {
+                    /* Generating cover query from sibling topics. */
+                    cQuery = generateCoverQuery(scores.get(0), bucketNum, currentQueryTopicLevel, currentQueryTopicNo, true, -1);
+                } else {
+                    /* Generating cover query from same level of original query but not from sibling topics */
+                    cQuery = generateCoverQuery(scores.get(0), bucketNum, currentQueryTopicLevel, currentQueryTopicNo, false, -1);
+                }
+            } else {
+                /**
+                 * Current query is sequentially edited, so cover queries will
+                 * be generated based on previous cover query topics.
+                 */
+                int coverQuTopic = coverQTopics.get(count);
+                if (seqEdited == 1) {
+                    /**
+                     * Cover query should be generated from parent topic of the
+                     * previous cover query.
+                     */
+                    int topicId = languageModels.get(coverQuTopic).getParent().getTopic_id();
+                    cQuery = generateCoverQuery(scores.get(0), bucketNum, currentQueryTopicLevel, currentQueryTopicNo, false, topicId);
+                } else {
+                    /**
+                     * Cover query should be generated from child topic of the
+                     * previous cover query.
+                     */
+                    int rand = getRandom(0, languageModels.get(coverQuTopic).getListOfChildren().size());
+                    int topicId = languageModels.get(coverQuTopic).getListOfChildren().get(rand).getTopic_id();
+                    cQuery = generateCoverQuery(scores.get(0), bucketNum, currentQueryTopicLevel, currentQueryTopicNo, false, topicId);
+                }
+            }
             if (cQuery != null) {
-                retValue.add(cQuery);
+                coverQueries.add(cQuery);
                 count++;
             }
             if (count == N) {
                 break;
             }
         }
-        return retValue;
+        return coverQueries;
     }
 
     /**
@@ -409,29 +573,11 @@ public class GenerateCoverQuery {
      * @return
      */
     public int getLastQueryTopicNo() {
-        return lastQueryTopicNo;
+        return currentQueryTopicNo;
     }
 
-    /**
-     * Returns the most common value of the list.
-     *
-     * @param <T>
-     * @param list
-     * @return
-     */
-    private <T> T mostCommon(List<T> list) {
-        Map<T, Integer> map = new HashMap<>();
-        for (T t : list) {
-            Integer val = map.get(t);
-            map.put(t, val == null ? 1 : val + 1);
-        }
-        Entry<T, Integer> max = null;
-        for (Entry<T, Integer> e : map.entrySet()) {
-            if (max == null || e.getValue() > max.getValue()) {
-                max = e;
-            }
-        }
-        return max.getKey();
+    public ArrayList<Integer> getCoverQueryTopics() {
+        return coverQueryTopics;
     }
 
     /**
@@ -447,7 +593,7 @@ public class GenerateCoverQuery {
             fw = new FileWriter("./data/Random-Query-with-Cover-Query.txt");
             String line;
             while ((line = br.readLine()) != null) {
-                ArrayList<String> coverQueries = generateNQueries(line, 1, -1);
+                ArrayList<String> coverQueries = generateNQueries(line, 1, -1, new ArrayList<>());
                 if (coverQueries == null) {
                     System.out.println("Topic can not be inferred for query = " + line);
                 } else {
@@ -471,9 +617,11 @@ public class GenerateCoverQuery {
 
     public static void main(String[] args) throws Throwable {
         LoadLanguageModel llm = new LoadLanguageModel();
-        llm.loadModels(3);
+        llm.loadModels(2);
         ArrayList<LanguageModel> list = llm.getLanguageModels();
         GenerateCoverQuery GQ = new GenerateCoverQuery(list);
-        GQ.test("./data/Random-1000-Query.txt");
+//        GQ.test("./data/Random-1000-Query.txt");
+        ArrayList<String> coverQueries = GQ.generateNQueries("google images", 2, -1, new ArrayList<>());
+        System.out.println(coverQueries.toString());
     }
 }

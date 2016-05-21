@@ -150,9 +150,15 @@ public class Evaluate {
      *
      * @param earlierDate
      * @param laterDate
+     * @param lastSubmittedQuery
+     * @param currentQuery
      * @return
      */
-    private long getDateDifference(String earlierDate, String laterDate) {
+    private boolean checkSameSession(String earlierDate, String laterDate, String lastSubmittedQuery, String currentQuery) {
+        /**
+         * Measuring the time difference between current query and last
+         * submitted query in minutes.
+         */
         SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
         long diffMinutes = -1;
         try {
@@ -164,7 +170,30 @@ public class Evaluate {
         } catch (Exception ex) {
             Logger.getLogger(UserProfile.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return diffMinutes;
+        /**
+         * Measuring the similarity between current query and last submitted
+         * query in terms of similar tokens they have.
+         */
+        StringTokenizer st = new StringTokenizer(true, true);
+        HashSet<String> currentQuTokens = new HashSet<>(st.TokenizeString(currentQuery));
+        HashSet<String> prevQuTokens = new HashSet<>(st.TokenizeString(lastSubmittedQuery));
+        boolean isSimilar = false;
+        double count = Math.ceil(currentQuTokens.size() / 2.0);
+        HashSet<String> intersection = new HashSet<>(currentQuTokens);
+        intersection.retainAll(prevQuTokens);
+        if (intersection.size() >= count) {
+            isSimilar = true;
+        }
+        /**
+         * If time difference is less than 60 minutes between current query and
+         * previous query or if both queries have 50% similarity in terms of
+         * having similar tokens, they belong to the same session .
+         */
+        if (diffMinutes < 60 || isSimilar) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -205,6 +234,7 @@ public class Evaluate {
              * submitted.
              */
             String lastQuerySubmitTime = null;
+            String lastSubmittedQuery = null;
             session = new UserSession();
             for (String queryWithTimeStamp : mappingQueryToURL.keySet()) {
                 HashSet<String> clickedDocs = mappingQueryToURL.get(queryWithTimeStamp);
@@ -221,9 +251,9 @@ public class Evaluate {
                     String[] tokens = queryWithTimeStamp.split("\t");
                     String query = tokens[0].trim();
                     String timeStamp = tokens[1].trim();
-                    if (lastQuerySubmitTime != null) {
-                        long diff = getDateDifference(lastQuerySubmitTime, timeStamp);
-                        if (diff <= 60) {
+                    if (lastQuerySubmitTime != null && lastSubmittedQuery != null) {
+                        boolean isSame = checkSameSession(lastQuerySubmitTime, timeStamp, lastSubmittedQuery, query);
+                        if (isSame) {
                             // current query and previous query are from same session
                         } else {
                             // start of a new user session
@@ -235,6 +265,7 @@ public class Evaluate {
                     meanAvgPrec += avgPrec;
                     ++numQueries;
                     lastQuerySubmitTime = timeStamp;
+                    lastSubmittedQuery = query;
                 }
             }
 
@@ -295,10 +326,15 @@ public class Evaluate {
             avgp = submitOriginalQuery(query, clickedDocs);
         } else {
             ArrayList<String> coverQueries;
+            /**
+             * If the user is repeating a query in the same session, same set of
+             * cover queries will be submitted to the search engine.
+             */
             int retVal = session.isRepeatedQuery(query);
             if (retVal == -1) {
-                coverQueries = gCoverQuery.generateNQueries(query, numOfCoverQ, session.getLastQueryTopicNo());
+                coverQueries = gCoverQuery.generateNQueries(query, numOfCoverQ, session.getLastQueryTopicNo(), session.getCoverQuTopicsOfLastQuery());
             } else {
+                /* User has repeated a query in the same session */
                 coverQueries = session.getCoverQueries(retVal);
             }
             // if for some reason cover queries are not generated properly
@@ -324,7 +360,8 @@ public class Evaluate {
             }
             // updating user session with user query and corresponding cover queries
             session.addUserQuery(query, queryId, gCoverQuery.getLastQueryTopicNo());
-            session.addCoverQuery(queryId, coverQueries);
+            session.setCoverQueries(queryId, coverQueries);
+            session.setCoverQueryTopics(queryId, gCoverQuery.getCoverQueryTopics());
         }
         return avgp;
     }
@@ -379,7 +416,8 @@ public class Evaluate {
         HashMap<String, Integer> uniqueDocTerms;
 
         for (int i = 0; i < relDocs.size(); i++) {
-            List<String> tokens = StringTokenizer.TokenizeString(relDocs.get(i).content());
+            StringTokenizer st = new StringTokenizer(true, true);
+            List<String> tokens = st.TokenizeString(relDocs.get(i).content());
             uniqueDocTerms = new HashMap<>();
 
             // computing term frequency of all the unique terms found in the document

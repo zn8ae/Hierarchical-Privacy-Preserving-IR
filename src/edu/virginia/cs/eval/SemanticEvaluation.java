@@ -60,7 +60,8 @@ public class SemanticEvaluation {
             if (query.isEmpty()) {
                 return 0;
             }
-            List<String> tokens = StringTokenizer.TokenizeString(query);
+            StringTokenizer st = new StringTokenizer(true, true);
+            List<String> tokens = st.TokenizeString(query);
             if (tokens.size() > 0) {
                 int docFreqCount = getDocFrequency(tokens);
                 probQuery = (docFreqCount * 1.0) / totalDocumentCount;

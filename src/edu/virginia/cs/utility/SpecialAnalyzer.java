@@ -6,6 +6,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
+import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.miscellaneous.LengthFilter;
 import org.apache.lucene.analysis.standard.StandardFilter;
@@ -19,6 +20,14 @@ import org.apache.lucene.util.Version;
  */
 public class SpecialAnalyzer extends Analyzer {
 
+    private final boolean removeStopWords;
+    private final boolean doStemming;
+
+    public SpecialAnalyzer(boolean stopWordRemoval, boolean stemming) {
+        removeStopWords = stopWordRemoval;
+        doStemming = stemming;
+    }
+
     @Override
     protected TokenStreamComponents createComponents(String fieldName,
             Reader reader) {
@@ -26,7 +35,13 @@ public class SpecialAnalyzer extends Analyzer {
         TokenStream filter = new StandardFilter(Version.LUCENE_46, source);
         filter = new LowerCaseFilter(Version.LUCENE_46, filter);
         filter = new LengthFilter(Version.LUCENE_46, filter, 2, 35);
-//        filter = new PorterStemFilter(filter);
+        if (doStemming) {
+            filter = new PorterStemFilter(filter);
+        }
+        if (removeStopWords) {
+            filter = new StopFilter(Version.LUCENE_46, filter,
+                    StopFilter.makeStopSet(Version.LUCENE_46, Stopwords.STOPWORDS));
+        }
         return new TokenStreamComponents(source, filter);
     }
 }

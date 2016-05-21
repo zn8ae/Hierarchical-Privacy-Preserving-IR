@@ -55,7 +55,7 @@ public class Searcher {
      * @param indexPath The path to the desired Lucene index.
      */
     public Searcher(String indexPath) {
-        analyzer = new SpecialAnalyzer();
+        analyzer = new SpecialAnalyzer(true, true);
         try {
             IndexReader reader = DirectoryReader.open(FSDirectory.open(new File(indexPath)));
             indexSearcher = new IndexSearcher(reader);
@@ -173,6 +173,7 @@ public class Searcher {
                 HashSet<String> uniqueDocTerms;
                 /* Fetching server side user profile for personalization */
                 HashMap<String, Integer> uProf = userProfile.getUserProfile();
+                StringTokenizer st = new StringTokenizer(true, true);
 
                 for (int i = 0; i < relDocs.length; i++) {
                     Document doc = indexSearcher.doc(relDocs[i].doc);
@@ -180,7 +181,7 @@ public class Searcher {
                      * Extract the unique tokens from a relevant document
                      * returned by the lucene index searcher.
                      */
-                    uniqueDocTerms = new HashSet<>(StringTokenizer.TokenizeString(doc.getField(field).stringValue()));
+                    uniqueDocTerms = new HashSet<>(st.TokenizeString(doc.getField(field).stringValue()));
 
                     /* Score after personalizing result */
                     float score = 0;

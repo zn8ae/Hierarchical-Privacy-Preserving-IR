@@ -18,7 +18,11 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
  */
 public class StringTokenizer {
 
-    private static final SpecialAnalyzer analyzer = new SpecialAnalyzer();
+    private final SpecialAnalyzer analyzer;
+
+    public StringTokenizer(boolean removeStopWords, boolean doStemming) {
+        analyzer = new SpecialAnalyzer(removeStopWords, doStemming);
+    }
 
     /**
      * Method that generates list of tokens from the parameter string.
@@ -26,7 +30,7 @@ public class StringTokenizer {
      * @param string
      * @return list of tokens generated
      */
-    public static List<String> TokenizeString(String string) {
+    public List<String> TokenizeString(String string) {
         List<String> result = new ArrayList<>();
         try {
             TokenStream stream = analyzer.tokenStream(null, new StringReader(string));

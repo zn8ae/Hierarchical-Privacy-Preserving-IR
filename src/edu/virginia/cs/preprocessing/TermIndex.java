@@ -41,7 +41,7 @@ public class TermIndex {
         try {
             factory = SAXParserFactory.newInstance();
             saxParser = factory.newSAXParser();
-            readFile("./data/AolCrawledData.xml");
+            readFile("./data/xml/AolCrawledData.xml");
         } catch (ParserConfigurationException | SAXException ex) {
             Logger.getLogger(AOLDictionary.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -66,10 +66,12 @@ class AOLHandler extends DefaultHandler {
     private boolean isContent;
     private int pageCount;
     private final HashMap<String, List<Integer>> Dictionary;
+    private final StringTokenizer tokenizer;
 
     public AOLHandler(String filename, String dictFile) {
         buffer = new StringBuilder();
         Dictionary = new HashMap<>();
+        tokenizer = new StringTokenizer(true, true);
         try {
             fwriter = new FileWriter(filename);
             BufferedReader br = new BufferedReader(new FileReader(new File(dictFile)));
@@ -126,7 +128,7 @@ class AOLHandler extends DefaultHandler {
         } else if (qName.equalsIgnoreCase("page")) {
             if (buffer.toString().length() > 0) {
                 pageCount++;
-                StoreInDictionary(StringTokenizer.TokenizeString(buffer.toString()), pageCount);
+                StoreInDictionary(tokenizer.TokenizeString(buffer.toString()), pageCount);
             }
             if (pageCount % 10000 == 0) {
                 System.out.println(pageCount + " pages completed...!");
