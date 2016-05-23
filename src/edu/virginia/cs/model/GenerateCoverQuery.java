@@ -427,7 +427,7 @@ public class GenerateCoverQuery {
             lm = languageModels.get(coverQuTopic);
         }
         ArrayList<String> cQuery = new ArrayList<>();
-        for (int k = 0; k < length; k++) {
+        for (int k = 0; k < length;) {
             String tempFourgram;
             if (cQuery.isEmpty()) {
                 tempFourgram = getFourGramFromLM(lm, bucketNum, null);
@@ -465,6 +465,7 @@ public class GenerateCoverQuery {
                     if (tempBigram == null) {
                         String tempUnigram = getUniGramFromLM(lm, bucketNum);
                         if (tempUnigram != null) {
+                            k = k + 1;
                             cQuery.add(tempUnigram);
                         }
                     } else {
@@ -735,6 +736,7 @@ public class GenerateCoverQuery {
             return null;
         }
         currentQueryTopicNo = scores.get(1);
+        System.out.println("Inferred topic = " + languageModels.get(currentQueryTopicNo).getTopic_name());
         int currentQueryTopicLevel = languageModels.get(currentQueryTopicNo).getLevel();
         int seqEdited = 0;
         if (previousQueryTopicNo != -1) {
