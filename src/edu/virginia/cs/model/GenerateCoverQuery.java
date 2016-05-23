@@ -33,7 +33,7 @@ public class GenerateCoverQuery {
     public GenerateCoverQuery(ArrayList<LanguageModel> list) {
         languageModels = list;
         /* No stopword removal and no stemming during inference and generation step */
-        tokenizer = new StringTokenizer(false, false);
+        tokenizer = new StringTokenizer(false, true);
     }
 
     /**
@@ -147,6 +147,38 @@ public class GenerateCoverQuery {
     }
 
     /**
+     * Returns a unigram from a given language model and bucket number.
+     *
+     * @param lm
+     * @param bucketNum
+     * @return
+     */
+    private String getUniGramFromLM(LanguageModel lm, int bucketNum) {
+        ArrayList<String> possibleCoverQ = new ArrayList<>();
+        double max = lm.getMaxProbUnigram();
+        double min = lm.getMinProbUnigram();
+        for (Map.Entry<String, Integer> entry : lm.getUnigramLM().entrySet()) {
+            if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                possibleCoverQ.add(entry.getKey());
+            }
+        }
+        if (possibleCoverQ.size() > 0) {
+            StringTokenizer st = new StringTokenizer(true, true);
+            for (int i = 0; i < possibleCoverQ.size(); i++) {
+                int coverQNum = getRandom(0, possibleCoverQ.size());
+                String cQuery = possibleCoverQ.get(coverQNum);
+                if (st.TokenizeString(cQuery).size() == 1) {
+                    coverQueryTopics.add(lm.getTopic_id());
+                    return cQuery;
+                }
+            }
+            return null;
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Generate cover query of length 2 using bigram language model.
      *
      * @param level
@@ -169,6 +201,50 @@ public class GenerateCoverQuery {
         for (Map.Entry<String, Integer> entry : lm.getBigramLM().entrySet()) {
             if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
                 possibleCoverQ.add(entry.getKey());
+            }
+        }
+        if (possibleCoverQ.size() > 0) {
+            StringTokenizer st = new StringTokenizer(true, true);
+            for (int i = 0; i < possibleCoverQ.size(); i++) {
+                int coverQNum = getRandom(0, possibleCoverQ.size());
+                String cQuery = possibleCoverQ.get(coverQNum);
+                if (st.TokenizeString(cQuery).size() == 2) {
+                    coverQueryTopics.add(lm.getTopic_id());
+                    return cQuery;
+                }
+            }
+            return null;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Returns a bigram from a given language model and bucket number. Returns a
+     * bigram which contains the trigram if provided.
+     *
+     * @param lm
+     * @param bucketNum
+     * @param unigram
+     * @return
+     */
+    private String getCQfromBigramLM(LanguageModel lm, int bucketNum, String unigram) {
+        ArrayList<String> possibleCoverQ = new ArrayList<>();
+        double max = lm.getMaxProbBigram();
+        double min = lm.getMinProbBigram();
+        if (unigram == null) {
+            for (Map.Entry<String, Integer> entry : lm.getBigramLM().entrySet()) {
+                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                    possibleCoverQ.add(entry.getKey());
+                }
+            }
+        } else {
+            for (Map.Entry<String, Integer> entry : lm.getBigramLM().entrySet()) {
+                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                    if (entry.getKey().contains(unigram)) {
+                        possibleCoverQ.add(entry.getKey());
+                    }
+                }
             }
         }
         if (possibleCoverQ.size() > 0) {
@@ -222,6 +298,45 @@ public class GenerateCoverQuery {
     }
 
     /**
+     * Returns a trigram from a given language model and bucket number. Returns
+     * a trigram which contains the bigram if provided.
+     *
+     * @param lm
+     * @param bucketNum
+     * @param bigram
+     * @return
+     */
+    private String getTriGramFromLM(LanguageModel lm, int bucketNum, String bigram) {
+        ArrayList<String> possibleCoverQ = new ArrayList<>();
+        double max = lm.getMaxProbTrigram();
+        double min = lm.getMinProbTrigram();
+        if (bigram == null) {
+            for (Map.Entry<String, Integer> entry : lm.getTrigramLM().entrySet()) {
+                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                    possibleCoverQ.add(entry.getKey());
+                }
+            }
+        } else {
+            for (Map.Entry<String, Integer> entry : lm.getTrigramLM().entrySet()) {
+                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                    if (entry.getKey().contains(bigram)) {
+                        possibleCoverQ.add(entry.getKey());
+                    }
+                }
+            }
+        }
+        if (possibleCoverQ.size() > 0) {
+            int coverQNum = getRandom(0, possibleCoverQ.size());
+            if (bigram == null) {
+                coverQueryTopics.add(lm.getTopic_id());
+            }
+            return possibleCoverQ.get(coverQNum);
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Generate cover query of length 4 using fourgram language model.
      *
      * @param level
@@ -256,6 +371,45 @@ public class GenerateCoverQuery {
     }
 
     /**
+     * Returns a fourgram from a given language model and bucket number. Returns
+     * a fourgram which contains the trigram if provided.
+     *
+     * @param lm
+     * @param bucketNum
+     * @param trigram
+     * @return
+     */
+    private String getFourGramFromLM(LanguageModel lm, int bucketNum, String trigram) {
+        ArrayList<String> possibleCoverQ = new ArrayList<>();
+        double max = lm.getMaxProbFourgram();
+        double min = lm.getMinProbFourgram();
+        if (trigram == null) {
+            for (Map.Entry<String, Integer> entry : lm.getFourgramLM().entrySet()) {
+                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                    possibleCoverQ.add(entry.getKey());
+                }
+            }
+        } else {
+            for (Map.Entry<String, Integer> entry : lm.getFourgramLM().entrySet()) {
+                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                    if (entry.getKey().contains(trigram)) {
+                        possibleCoverQ.add(entry.getKey());
+                    }
+                }
+            }
+        }
+        if (possibleCoverQ.size() > 0) {
+            int coverQNum = getRandom(0, possibleCoverQ.size());
+            if (trigram == null) {
+                coverQueryTopics.add(lm.getTopic_id());
+            }
+            return possibleCoverQ.get(coverQNum);
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Generate cover query of length greater than 4 using a special procedure.
      *
      * @param level
@@ -265,27 +419,82 @@ public class GenerateCoverQuery {
      * @param coverQuTopic
      * @return the cover query
      */
-    private String getCQfromNgramLM(int level, int bucketNum, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
+    private String getCQfromNgramLM(int length, int level, int bucketNum, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
         LanguageModel lm;
         if (coverQuTopic == -1) {
             lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
         } else {
             lm = languageModels.get(coverQuTopic);
         }
-        ArrayList<String> possibleCoverQ = new ArrayList<>();
-        double max = lm.getMaxProbUnigram();
-        double min = lm.getMinProbUnigram();
-        for (Map.Entry<String, Integer> entry : lm.getFourgramLM().entrySet()) {
-            if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
-                possibleCoverQ.add(entry.getKey());
+        ArrayList<String> cQuery = new ArrayList<>();
+        for (int k = 0; k < length; k++) {
+            String tempFourgram;
+            if (cQuery.isEmpty()) {
+                tempFourgram = getFourGramFromLM(lm, bucketNum, null);
+            } else if (cQuery.size() >= 3) {
+                String trigram = "";
+                for (int x = cQuery.size() - 3; x < cQuery.size(); x++) {
+                    trigram += cQuery.get(x) + " ";
+                }
+                trigram = trigram.trim();
+                tempFourgram = getFourGramFromLM(lm, bucketNum, trigram);
+            } else {
+                tempFourgram = null;
+            }
+            if (tempFourgram == null) {
+                String tempTrigram;
+                if (cQuery.isEmpty()) {
+                    tempTrigram = getTriGramFromLM(lm, bucketNum, null);
+                } else if (cQuery.size() >= 2) {
+                    int l = cQuery.size() - 1;
+                    String bigram = cQuery.get(l - 1) + " " + cQuery.get(l);
+                    tempTrigram = getTriGramFromLM(lm, bucketNum, bigram);
+                } else {
+                    tempTrigram = null;
+                }
+                if (tempTrigram == null) {
+                    String tempBigram;
+                    if (cQuery.isEmpty()) {
+                        tempBigram = getCQfromBigramLM(lm, bucketNum, null);
+                    } else if (cQuery.size() >= 1) {
+                        String unigram = cQuery.get(cQuery.size() - 1);
+                        tempBigram = getCQfromBigramLM(lm, bucketNum, unigram);
+                    } else {
+                        tempBigram = null;
+                    }
+                    if (tempBigram == null) {
+                        String tempUnigram = getUniGramFromLM(lm, bucketNum);
+                        if (tempUnigram != null) {
+                            cQuery.add(tempUnigram);
+                        }
+                    } else {
+                        k = k + 2;
+                        for (String str : tokenizer.TokenizeString(tempBigram)) {
+                            cQuery.add(str);
+                        }
+                    }
+                } else {
+                    k = k + 3;
+                    for (String str : tokenizer.TokenizeString(tempTrigram)) {
+                        cQuery.add(str);
+                    }
+                }
+            } else {
+                k = k + 4;
+                for (String str : tokenizer.TokenizeString(tempFourgram)) {
+                    cQuery.add(str);
+                }
             }
         }
-        if (possibleCoverQ.size() > 0) {
-            int coverQNum = getRandom(0, possibleCoverQ.size());
-            coverQueryTopics.add(lm.getTopic_id());
-            return possibleCoverQ.get(coverQNum);
-        } else {
+        if (cQuery.isEmpty()) {
             return null;
+        } else {
+            String coverQ = "";
+            for (String term : cQuery) {
+                coverQ += term + " ";
+            }
+            coverQ = coverQ.trim();
+            return coverQ;
         }
     }
 
@@ -304,6 +513,7 @@ public class GenerateCoverQuery {
      */
     private String generateCoverQuery(int queryLength, int bucketNum, int level, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
         int coverQuLen = getPoisson(queryLength);
+        System.out.println("Co q length = " + coverQuLen);
         if (coverQuLen == 0) {
             return null;
         }
@@ -322,7 +532,7 @@ public class GenerateCoverQuery {
                 coverQ = getCQfromFourgramLM(level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
                 break;
             default:
-                coverQ = getCQfromNgramLM(level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
+                coverQ = getCQfromNgramLM(coverQuLen, level, bucketNum, trueQuTopic, fromSibling, coverQuTopic);
                 break;
         }
         return coverQ;
@@ -361,9 +571,10 @@ public class GenerateCoverQuery {
     }
 
     /**
+     * Returns the best topic that characterize the given query.
      *
      * @param tokens
-     * @param n
+     * @param n size of the query
      * @return
      */
     private int getBestTopic(String query, int n) {
@@ -386,7 +597,7 @@ public class GenerateCoverQuery {
             } else if (n == 4) {
                 prob = lm.getProbabilityFourgram(query, true);
             } else {
-                prob = lm.getProbabilityNgram(query, true);
+                prob = lm.getProbabilityNgram(query, n);
             }
             if (prob > maxProb) {
                 maxProb = prob;
@@ -439,24 +650,15 @@ public class GenerateCoverQuery {
             min = selectedModel.getMinProbTrigram();
             double prob = selectedModel.getProbabilityTrigram(modifiedQuery, true);
             scores.add(getBucketNumber(prob, max, min));
+        } else if (n == 4) {
+            max = selectedModel.getMaxProbFourgram();
+            min = selectedModel.getMinProbFourgram();
+            double prob = selectedModel.getProbabilityFourgram(modifiedQuery, true);
+            scores.add(getBucketNumber(prob, max, min));
         } else {
             max = selectedModel.getMaxProbFourgram();
             min = selectedModel.getMinProbFourgram();
-            double prob;
-            if (n == 4) {
-                prob = selectedModel.getProbabilityFourgram(modifiedQuery, true);
-            } else {
-                /**
-                 * if user query of length greater than 4, consider only the
-                 * first 4-gram to infer bucket number.
-                 */
-                String tempQuery = "";
-                for (int i = 0; i < 4; i++) {
-                    tempQuery += tokens.get(i) + " ";
-                }
-                tempQuery = tempQuery.trim();
-                prob = selectedModel.getProbabilityFourgram(tempQuery, true);
-            }
+            double prob = selectedModel.getProbabilityNgram(modifiedQuery, n);
             scores.add(getBucketNumber(prob, max, min));
         }
         return scores;
@@ -621,7 +823,7 @@ public class GenerateCoverQuery {
         ArrayList<LanguageModel> list = llm.getLanguageModels();
         GenerateCoverQuery GQ = new GenerateCoverQuery(list);
 //        GQ.test("./data/Random-1000-Query.txt");
-        ArrayList<String> coverQueries = GQ.generateNQueries("google images", 2, -1, new ArrayList<>());
+        ArrayList<String> coverQueries = GQ.generateNQueries("how to take revenge againts old lover", 2, -1, new ArrayList<>());
         System.out.println(coverQueries.toString());
     }
 }

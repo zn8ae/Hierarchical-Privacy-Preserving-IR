@@ -341,30 +341,31 @@ public class LanguageModel {
     }
 
     /**
-     * Computes joint probability or conditional probability of a n-gram where
-     * n>4.
+     * Computes joint probability of a n-gram where n>4. Suppose n=6, then joint
+     * probability formula is, P(w6 w5 w4 w3 w2 w1) = P(w6 | w5 w4 w3) * P(w5 |
+     * w4 w3 w2) * P(w4 | w3 w2 w1) * P(w3 | w2 w1) * P(w2 | w1) * P(w1)
      *
      * @param ngram
-     * @param isJoint
+     * @param n
      * @return
      */
-    public double getProbabilityNgram(String ngram, boolean isJoint) {
-        double prob;
+    public double getProbabilityNgram(String ngram, int n) {
+        double prob = 1.0;
         /* Computing probability of a fourgram using linear interpolation smoothing */
         String[] split = ngram.split(" ");
-        String prevTrigram = split[0] + " " + split[1] + " " + split[2];
-        if (fourgramLM.containsKey(ngram)) {
-            prob = (1.0 - lambda) * (fourgramLM.get(ngram) / trigramLM.get(prevTrigram));
-        } else {
-            prob = 0.0;
-        }
-        String trigram = split[1] + " " + split[2] + " " + split[3];
-        prob += lambda * getProbabilityTrigram(trigram, false);
-        if (isJoint) {
-            prob *= getProbabilityBigram(prevTrigram, false);
-            String bigram = split[0] + " " + split[1];
-            prob *= getProbabilityBigram(bigram, false);
-            prob *= getProbabilityUnigram(split[0]);
+        for (int i = split.length - 1; i >= 0; i--) {
+            if (i >= 3) {
+                String fourgram = split[i - 3] + " " + split[i - 2] + " " + split[i - 1] + " " + split[i];
+                prob *= getProbabilityFourgram(fourgram, false);
+            } else if (i == 2) {
+                String trigram = split[i - 2] + " " + split[i - 1] + " " + split[i];
+                prob *= getProbabilityBigram(trigram, false);
+            } else if (i == 1) {
+                String bigram = split[i - 1] + " " + split[i];
+                prob *= getProbabilityBigram(bigram, false);
+            } else {
+                prob *= getProbabilityUnigram(split[0]);
+            }
         }
         return prob;
     }

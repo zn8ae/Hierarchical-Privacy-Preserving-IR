@@ -47,8 +47,8 @@ public class LanguageModelGenerator {
     private final StringTokenizer tokenizer;
 
     public LanguageModelGenerator() {
-        /* No stopword removal and no stemming during language model generation */
-        tokenizer = new StringTokenizer(false, false);
+        /* No stopword removal but do stemming during language model generation */
+        tokenizer = new StringTokenizer(false, true);
     }
 
     /**
@@ -304,7 +304,7 @@ public class LanguageModelGenerator {
     public static void main(String[] args) throws Throwable {
         // TODO code application logic here
         LanguageModelGenerator tmodel = new LanguageModelGenerator();
-        tmodel.ReadDMOZData("data/DMOZ-Crawled-Data-Level-4.xml");
+        tmodel.ReadDMOZData("data/xml/DMOZ-Crawled-Data-Level-4.xml");
         tmodel.LoadDirectory("data/dmoz_data/Top/");
     }
 }
