@@ -468,21 +468,39 @@ public class GenerateCoverQuery {
                             cQuery.add(tempUnigram);
                         }
                     } else {
-                        k = k + 2;
-                        for (String str : tokenizer.TokenizeString(tempBigram)) {
-                            cQuery.add(str);
+                        List<String> tokens = tokenizer.TokenizeString(tempBigram);
+                        if (cQuery.isEmpty()) {
+                            k = k + 2;
+                            for (String str : tokens) {
+                                cQuery.add(str);
+                            }
+                        } else {
+                            k = k + 1;
+                            cQuery.add(tokens.get(1));
                         }
                     }
                 } else {
-                    k = k + 3;
-                    for (String str : tokenizer.TokenizeString(tempTrigram)) {
-                        cQuery.add(str);
+                    List<String> tokens = tokenizer.TokenizeString(tempTrigram);
+                    if (cQuery.isEmpty()) {
+                        k = k + 3;
+                        for (String str : tokens) {
+                            cQuery.add(str);
+                        }
+                    } else {
+                        k = k + 1;
+                        cQuery.add(tokens.get(2));
                     }
                 }
             } else {
-                k = k + 4;
-                for (String str : tokenizer.TokenizeString(tempFourgram)) {
-                    cQuery.add(str);
+                List<String> tokens = tokenizer.TokenizeString(tempFourgram);
+                if (cQuery.isEmpty()) {
+                    k = k + 4;
+                    for (String str : tokens) {
+                        cQuery.add(str);
+                    }
+                } else {
+                    k = k + 1;
+                    cQuery.add(tokens.get(3));
                 }
             }
         }
