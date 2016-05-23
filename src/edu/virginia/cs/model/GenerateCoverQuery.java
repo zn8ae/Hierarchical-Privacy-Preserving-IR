@@ -122,6 +122,9 @@ public class GenerateCoverQuery {
         } else {
             lm = languageModels.get(coverQuTopic);
         }
+        if (lm.isEmpty()) {
+            return null;
+        }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbUnigram();
         double min = lm.getMinProbUnigram();
@@ -194,6 +197,9 @@ public class GenerateCoverQuery {
             lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
         } else {
             lm = languageModels.get(coverQuTopic);
+        }
+        if (lm.getBigramLM().isEmpty()) {
+            return null;
         }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbBigram();
@@ -280,6 +286,9 @@ public class GenerateCoverQuery {
         } else {
             lm = languageModels.get(coverQuTopic);
         }
+        if (lm.getTrigramLM().isEmpty()) {
+            return null;
+        }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbTrigram();
         double min = lm.getMinProbTrigram();
@@ -352,6 +361,9 @@ public class GenerateCoverQuery {
             lm = getCoverQueryTopic(level, trueQuTopic, fromSibling);
         } else {
             lm = languageModels.get(coverQuTopic);
+        }
+        if (lm.getFourgramLM().isEmpty()) {
+            return null;
         }
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbFourgram();
@@ -426,6 +438,10 @@ public class GenerateCoverQuery {
         } else {
             lm = languageModels.get(coverQuTopic);
         }
+        if (lm.isEmpty()) {
+            return null;
+        }
+//        System.out.println("Trying from " + lm.getTopic_name());
         ArrayList<String> cQuery = new ArrayList<>();
         for (int k = 0; k < length;) {
             String tempFourgram;
@@ -505,7 +521,7 @@ public class GenerateCoverQuery {
                 }
             }
         }
-        if (cQuery.isEmpty()) {
+        if (cQuery.size() < length) {
             return null;
         } else {
             String coverQ = "";
@@ -532,7 +548,7 @@ public class GenerateCoverQuery {
      */
     private String generateCoverQuery(int queryLength, int bucketNum, int level, int trueQuTopic, boolean fromSibling, int coverQuTopic) {
         int coverQuLen = getPoisson(queryLength);
-        System.out.println("Co q length = " + coverQuLen);
+//        System.out.println("Co q length = " + coverQuLen);
         if (coverQuLen == 0) {
             return null;
         }
@@ -736,7 +752,7 @@ public class GenerateCoverQuery {
             return null;
         }
         currentQueryTopicNo = scores.get(1);
-        System.out.println("Inferred topic = " + languageModels.get(currentQueryTopicNo).getTopic_name());
+//        System.out.println("Inferred topic = " + languageModels.get(currentQueryTopicNo).getTopic_name());
         int currentQueryTopicLevel = languageModels.get(currentQueryTopicNo).getLevel();
         int seqEdited = 0;
         if (previousQueryTopicNo != -1) {
