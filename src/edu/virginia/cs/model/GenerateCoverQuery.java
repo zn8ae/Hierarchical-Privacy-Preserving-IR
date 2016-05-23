@@ -238,18 +238,10 @@ public class GenerateCoverQuery {
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbBigram();
         double min = lm.getMinProbBigram();
-        if (unigram == null) {
-            for (Map.Entry<String, Integer> entry : lm.getBigramLM().entrySet()) {
-                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+        for (Map.Entry<String, Integer> entry : lm.getBigramLM().entrySet()) {
+            if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                if (entry.getKey().contains(unigram)) {
                     possibleCoverQ.add(entry.getKey());
-                }
-            }
-        } else {
-            for (Map.Entry<String, Integer> entry : lm.getBigramLM().entrySet()) {
-                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
-                    if (entry.getKey().contains(unigram)) {
-                        possibleCoverQ.add(entry.getKey());
-                    }
                 }
             }
         }
@@ -319,18 +311,10 @@ public class GenerateCoverQuery {
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbTrigram();
         double min = lm.getMinProbTrigram();
-        if (bigram == null) {
-            for (Map.Entry<String, Integer> entry : lm.getTrigramLM().entrySet()) {
-                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+        for (Map.Entry<String, Integer> entry : lm.getTrigramLM().entrySet()) {
+            if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                if (entry.getKey().contains(bigram)) {
                     possibleCoverQ.add(entry.getKey());
-                }
-            }
-        } else {
-            for (Map.Entry<String, Integer> entry : lm.getTrigramLM().entrySet()) {
-                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
-                    if (entry.getKey().contains(bigram)) {
-                        possibleCoverQ.add(entry.getKey());
-                    }
                 }
             }
         }
@@ -395,18 +379,10 @@ public class GenerateCoverQuery {
         ArrayList<String> possibleCoverQ = new ArrayList<>();
         double max = lm.getMaxProbFourgram();
         double min = lm.getMinProbFourgram();
-        if (trigram == null) {
-            for (Map.Entry<String, Integer> entry : lm.getFourgramLM().entrySet()) {
-                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+        for (Map.Entry<String, Integer> entry : lm.getFourgramLM().entrySet()) {
+            if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
+                if (entry.getKey().contains(trigram)) {
                     possibleCoverQ.add(entry.getKey());
-                }
-            }
-        } else {
-            for (Map.Entry<String, Integer> entry : lm.getFourgramLM().entrySet()) {
-                if (getBucketNumber(entry.getValue(), max, min) == bucketNum) {
-                    if (entry.getKey().contains(trigram)) {
-                        possibleCoverQ.add(entry.getKey());
-                    }
                 }
             }
         }
@@ -443,11 +419,9 @@ public class GenerateCoverQuery {
         }
 //        System.out.println("Trying from " + lm.getTopic_name());
         ArrayList<String> cQuery = new ArrayList<>();
-        for (int k = 0; k < length;) {
+        for (int k = 0; k < length; k++) {
             String tempFourgram;
-            if (cQuery.isEmpty()) {
-                tempFourgram = getFourGramFromLM(lm, bucketNum, null);
-            } else if (cQuery.size() >= 3) {
+            if (cQuery.size() >= 3) {
                 String trigram = "";
                 for (int x = cQuery.size() - 3; x < cQuery.size(); x++) {
                     trigram += cQuery.get(x) + " ";
@@ -459,9 +433,7 @@ public class GenerateCoverQuery {
             }
             if (tempFourgram == null) {
                 String tempTrigram;
-                if (cQuery.isEmpty()) {
-                    tempTrigram = getTriGramFromLM(lm, bucketNum, null);
-                } else if (cQuery.size() >= 2) {
+                if (cQuery.size() >= 2) {
                     int l = cQuery.size() - 1;
                     String bigram = cQuery.get(l - 1) + " " + cQuery.get(l);
                     tempTrigram = getTriGramFromLM(lm, bucketNum, bigram);
@@ -470,9 +442,7 @@ public class GenerateCoverQuery {
                 }
                 if (tempTrigram == null) {
                     String tempBigram;
-                    if (cQuery.isEmpty()) {
-                        tempBigram = getCQfromBigramLM(lm, bucketNum, null);
-                    } else if (cQuery.size() >= 1) {
+                    if (cQuery.size() >= 1) {
                         String unigram = cQuery.get(cQuery.size() - 1);
                         tempBigram = getCQfromBigramLM(lm, bucketNum, unigram);
                     } else {
@@ -481,44 +451,19 @@ public class GenerateCoverQuery {
                     if (tempBigram == null) {
                         String tempUnigram = getUniGramFromLM(lm, bucketNum);
                         if (tempUnigram != null) {
-                            k = k + 1;
                             cQuery.add(tempUnigram);
                         }
                     } else {
                         List<String> tokens = tokenizer.TokenizeString(tempBigram);
-                        if (cQuery.isEmpty()) {
-                            k = k + 2;
-                            for (String str : tokens) {
-                                cQuery.add(str);
-                            }
-                        } else {
-                            k = k + 1;
-                            cQuery.add(tokens.get(1));
-                        }
+                        cQuery.add(tokens.get(1));
                     }
                 } else {
                     List<String> tokens = tokenizer.TokenizeString(tempTrigram);
-                    if (cQuery.isEmpty()) {
-                        k = k + 3;
-                        for (String str : tokens) {
-                            cQuery.add(str);
-                        }
-                    } else {
-                        k = k + 1;
-                        cQuery.add(tokens.get(2));
-                    }
+                    cQuery.add(tokens.get(2));
                 }
             } else {
                 List<String> tokens = tokenizer.TokenizeString(tempFourgram);
-                if (cQuery.isEmpty()) {
-                    k = k + 4;
-                    for (String str : tokens) {
-                        cQuery.add(str);
-                    }
-                } else {
-                    k = k + 1;
-                    cQuery.add(tokens.get(3));
-                }
+                cQuery.add(tokens.get(3));
             }
         }
         if (cQuery.size() < length) {
@@ -855,7 +800,7 @@ public class GenerateCoverQuery {
 
     public static void main(String[] args) throws Throwable {
         LoadLanguageModel llm = new LoadLanguageModel();
-        llm.loadModels(2);
+        llm.loadModels("data/language_models/", 2);
         ArrayList<LanguageModel> list = llm.getLanguageModels();
         GenerateCoverQuery GQ = new GenerateCoverQuery(list);
 //        GQ.test("./data/Random-1000-Query.txt");

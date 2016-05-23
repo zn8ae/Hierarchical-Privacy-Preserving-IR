@@ -89,7 +89,7 @@ public class MultiThread extends Thread {
             ArrayList<String> allUserId = getAllUserId(settings.getUserSearchLogPath(), -1);
             loadRefModel(settings.getReferenceModelPath());
             LoadLanguageModel llm = new LoadLanguageModel();
-            llm.loadModels(2);
+            llm.loadModels(settings.getLanguageModelPath(), 2);
             ArrayList<LanguageModel> langModels = llm.getLanguageModels();
             int limit = allUserId.size() / settings.getNumberOfThreads();
             for (int i = 0; i < settings.getNumberOfThreads(); i++) {

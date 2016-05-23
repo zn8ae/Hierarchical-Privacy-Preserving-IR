@@ -15,11 +15,11 @@ import edu.virginia.cs.utility.FileOperations;
  * @author Wasi
  */
 public class LoadLanguageModel {
-    
+
     private final ArrayList<LanguageModel> languageModels;
     private final FileOperations fiop;
     private int level;
-    
+
     public LoadLanguageModel() {
         languageModels = new ArrayList<>();
         fiop = new FileOperations();
@@ -38,12 +38,13 @@ public class LoadLanguageModel {
      * Loads language models up to level 'param' from all language models of
      * DMOZ categories.
      *
+     * @param folder
      * @param param depth of the hierarchy
      * @return list of language models
      */
-    public ArrayList<LanguageModel> loadModels(int param) {
+    public ArrayList<LanguageModel> loadModels(String folder, int param) {
         level = param;
-        LoadDirectory("data/language_models/", null, 0, "Top");
+        LoadDirectory(folder, null, 0, "Top");
 //        for (LanguageModel lm : languageModels) {
 //            System.out.println("------------------------------------------------");
 //            System.out.println("Topic Name - " + lm.getTopic_name());
@@ -145,10 +146,10 @@ public class LoadLanguageModel {
         languageModels.add(LM);
         return LM;
     }
-    
+
     public static void main(String[] args) {
         LoadLanguageModel llm = new LoadLanguageModel();
-        llm.loadModels(3);
+        llm.loadModels("data/lanauage_models/", 3);
     }
-    
+
 }
