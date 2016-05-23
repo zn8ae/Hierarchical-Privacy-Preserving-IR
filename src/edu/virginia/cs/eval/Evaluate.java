@@ -110,7 +110,7 @@ public class Evaluate {
                 } else {
                     HashSet<String> tempSet;
                     if (mappingQueryToURL.containsKey(query)) {
-                        tempSet = mappingQueryToURL.get(line);
+                        tempSet = mappingQueryToURL.get(query);
                         tempSet.add(line);
                     } else {
                         tempSet = new HashSet<>();
