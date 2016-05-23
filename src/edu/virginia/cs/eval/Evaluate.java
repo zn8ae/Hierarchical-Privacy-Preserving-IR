@@ -130,6 +130,7 @@ public class Evaluate {
      * @param filename
      */
     private void loadIDFRecord(String filename) {
+        IDFRecord = new HashMap<>();
         try {
             BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
             double totalCount = Double.valueOf(br.readLine());
