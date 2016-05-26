@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  *
  * @author Wasi
  */
-public class MultiThread extends Thread {
+public class MultiThread {
 
     private Settings settings;
     private HashMap<String, Float> referenceModel;
