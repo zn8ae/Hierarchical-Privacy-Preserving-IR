@@ -84,7 +84,7 @@ The entire evaluation procedure on a single user works as follows.
  * Each user query along with the **k** cover queries are submitted to the search engine. Search effectiveness is measured only for the true user query.
  * [Evaluate.java](https://github.com/wasiuva/Privacy-Preserving-IR/blob/master/src/edu/virginia/cs/eval/Evaluate.java) program follows the above mentioned steps.
 
-## How to Full Pipeline for Multiple Users
+## Run Full Pipeline for N Users
  
  * Run [MultiThread.java](https://github.com/wasiahmad/Hierarchical-Privacy-Preserving-IR/blob/master/src/edu/virginia/cs/eval/MultiThread.java) program with all the input variables set in the **settings.txt** file.
  
