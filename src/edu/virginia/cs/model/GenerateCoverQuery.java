@@ -417,7 +417,6 @@ public class GenerateCoverQuery {
         if (lm.isEmpty()) {
             return null;
         }
-//        System.out.println("Trying from " + lm.getTopic_name());
         ArrayList<String> cQuery = new ArrayList<>();
         for (int k = 0; k < length; k++) {
             String tempFourgram;
